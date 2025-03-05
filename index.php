@@ -91,9 +91,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   $employee_id = $_POST['id'] ?? null; // Example: get employee_id from POST request
 
   // If employee ID is not found, show an error
-  if (!$employee_id) {
-    die('Employee ID is required.');
-  }
+  // if (!$employee_id) {
+  //   die('Employee ID is required.');
+  // }
 
   // Directory for uploads
   $upload_dir = "uploads/";

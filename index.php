@@ -265,7 +265,7 @@ $result = mysqli_query($conn, $sql);
           <div class="ml-4">
             <h1 class="text-lg md:text-xl font-bold text-gray-800 break-words">
               <span class="hidden md:inline">Employee Appointment Management System</span>
-              <span class="inline md:hidden">EAM System</span>
+              <span class="inline md:hidden">EMS System</span>
             </h1>
           </div>
         </div>

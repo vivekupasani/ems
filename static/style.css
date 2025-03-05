@@ -1,0 +1,34 @@
+  /* Navigation Drawer */
+  #navigationDrawer {
+    transition: transform 0.3s ease-in-out;
+  }
+
+  /* Overlay to dim the background */
+  #overlay {
+    transition: opacity 0.3s ease-in-out;
+  }
+
+  /* Hidden state for the drawer and overlay */
+  .hidden {
+    display: none;
+  }
+
+  .opacity-0 {
+    opacity: 0;
+  }
+
+  INSERT INTO admin_details (user_id, admin_code, department)
+VALUES 
+(1, 'ADM001', 'IT Department'),
+(1, 'ADM002', 'HR Department'),
+(2, 'ADM003', 'Admissions Office');
+INSERT INTO institution_details (user_id, institution_name, institution_type, address)
+VALUES 
+(2, 'Green Valley College', 'College', '123 Green St, New York, NY'),
+(2, 'Blue Sky Institute', 'College', '456 Blue St, Los Angeles, CA'),
+(3, 'Sunshine High School', 'School', '789 Sunshine Rd, Chicago, IL');
+INSERT INTO users (first_name, last_name, email, password, role)
+VALUES 
+('John', 'Doe', 'john.doe@example.com', 'hashed_password1', 'administrator'),
+('Jane', 'Smith', 'jane.smith@example.com', 'hashed_password2', 'college'),
+('Robert', 'Brown', 'robert.brown@example.com', 'hashed_password3', 'school');

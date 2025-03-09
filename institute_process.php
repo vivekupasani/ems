@@ -3,6 +3,18 @@
 session_start();
 require_once 'config/database.php';
 
+define('SECRET_KEY', 'Ek-Biladi-Jadi');
+define('CIPHER_METHOD', 'AES-256-CBC');
+
+// Function to decrypt the password
+function decryptPassword($encryptedPassword) {
+    $key = hash('sha256', SECRET_KEY, true);
+    $data = base64_decode($encryptedPassword);
+    $iv = substr($data, 0, 16);
+    $cipherText = substr($data, 16);
+    return openssl_decrypt($cipherText, CIPHER_METHOD, $key, OPENSSL_RAW_DATA, $iv);
+}
+
 // Function to validate institute credentials
 function validateInstituteLogin($pdo, $institute_id, $password) {
     try {
@@ -10,8 +22,11 @@ function validateInstituteLogin($pdo, $institute_id, $password) {
         $stmt->execute(['institute_id' => $institute_id]);
         $institute = $stmt->fetch();
 
-        if ($institute && md5($password, $institute['password'])) {
-            return $institute;
+        if ($institute) {
+            $decryptedStoredPassword = decryptPassword($institute['password']);
+            if ($decryptedStoredPassword === $password) {
+                return $institute;
+            }
         }
         return false;
     } catch(PDOException $e) {
@@ -68,4 +83,3 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         exit();
     }
 }
-?>

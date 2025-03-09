@@ -3,6 +3,18 @@
 session_start();
 require_once 'config/database.php';
 
+define('SECRET_KEY', 'Ek-Biladi-Jadi');
+define('CIPHER_METHOD', 'AES-256-CBC');
+
+// Function to decrypt the password
+function decryptPassword($encryptedPassword) {
+    $key = hash('sha256', SECRET_KEY, true);
+    $data = base64_decode($encryptedPassword);
+    $iv = substr($data, 0, 16);
+    $cipherText = substr($data, 16);
+    return openssl_decrypt($cipherText, CIPHER_METHOD, $key, OPENSSL_RAW_DATA, $iv);
+}
+
 // Function to validate school credentials
 function validateSchoolLogin($pdo, $school_id, $password) {
     try {
@@ -10,8 +22,11 @@ function validateSchoolLogin($pdo, $school_id, $password) {
         $stmt->execute(['school_id' => $school_id]);
         $school = $stmt->fetch();
 
-        if ($school && md5($password, $school['password'])) {
-            return $school;
+        if ($school) {
+            $decryptedStoredPassword = decryptPassword($school['password']);
+            if ($decryptedStoredPassword === $password) {
+                return $school;
+            }
         }
         return false;
     } catch(PDOException $e) {

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 05, 2025 at 11:17 AM
+-- Generation Time: Mar 09, 2025 at 06:23 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -43,7 +43,8 @@ CREATE TABLE `admin_users` (
 --
 
 INSERT INTO `admin_users` (`id`, `user_id`, `password`, `name`, `email`, `created_at`, `remember_token`, `token_expiry`) VALUES
-(1, 'admin1', '0192023a7bbd73250516f069df18b500', 'meet', 'meet@gmail.com', '2025-03-05 04:36:21', 'random_token', '2025-12-31 23:59:59');
+(1, 'admin1', 'U2FsdGVkX19FEQWMfX2kJftsLJf+V9vA56+uOsEIldg=', 'meet', 'meet@gmail.com', '2025-03-05 04:36:21', 'random_token', '2025-12-31 23:59:59'),
+(2, 'admin123', '5LAwI7DoCbgJ7iJawkTnc/SzgMfifKXfrzykAMdW9sM=', 'Vivek Upasani', 'v@v.com', '2025-03-09 05:10:14', 'caaa36fb3d8f0e652bfadb7d9b18a8c611acab6835fced79f48525f0d437b665', '2025-04-08 07:14:49');
 
 -- --------------------------------------------------------
 
@@ -229,7 +230,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `admin_users`
 --
 ALTER TABLE `admin_users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `employees`

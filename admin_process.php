@@ -3,6 +3,18 @@
 session_start();
 require_once 'config/database.php';
 
+define('SECRET_KEY', 'Ek-Biladi-Jadi');
+define('CIPHER_METHOD', 'AES-256-CBC');
+
+// Function to decrypt the password
+function decryptPassword($encryptedPassword) {
+    $key = hash('sha256', SECRET_KEY, true);
+    $data = base64_decode($encryptedPassword);
+    $iv = substr($data, 0, 16);
+    $cipherText = substr($data, 16);
+    return openssl_decrypt($cipherText, CIPHER_METHOD, $key, OPENSSL_RAW_DATA, $iv);
+}
+
 // Function to validate admin credentials
 function validateAdminLogin($pdo, $admin_id, $password) {
     try {
@@ -10,8 +22,11 @@ function validateAdminLogin($pdo, $admin_id, $password) {
         $stmt->execute(['admin_id' => $admin_id]);
         $admin = $stmt->fetch();
 
-        if ($admin && md5($password, $admin['password'])) {
-            return $admin;
+        if ($admin) {
+            $decryptedStoredPassword = decryptPassword($admin['password']);
+            if ($decryptedStoredPassword === $password) {
+                return $admin;
+            }
         }
         return false;
     } catch(PDOException $e) {

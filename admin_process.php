@@ -3,18 +3,42 @@
 session_start();
 require_once 'config/database.php';
 
+// Define encryption constants (must match process_user.php)
+define('SECRET_KEY', 'Ek-Biladi-Jadi');
+define('CIPHER_METHOD', 'AES-256-CBC');
+
+// Function to decrypt password
+function decryptPassword($encryptedPassword) {
+    $key = hash('sha256', SECRET_KEY, true);
+    $data = base64_decode($encryptedPassword);
+    if ($data === false) {
+        return false; // Invalid base64 data
+    }
+    
+    $ivLength = openssl_cipher_iv_length(CIPHER_METHOD);
+    $iv = substr($data, 0, $ivLength);
+    $cipherText = substr($data, $ivLength);
+    
+    $decrypted = openssl_decrypt($cipherText, CIPHER_METHOD, $key, OPENSSL_RAW_DATA, $iv);
+    return $decrypted !== false ? $decrypted : false;
+}
+
 // Function to validate admin credentials
 function validateAdminLogin($pdo, $admin_id, $password) {
     try {
         $stmt = $pdo->prepare("SELECT * FROM admin_users WHERE user_id = :admin_id");
         $stmt->execute(['admin_id' => $admin_id]);
-        $admin = $stmt->fetch();
+        $admin = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($admin && md5($password, $admin['password'])) {
-            return $admin;
+        if ($admin) {
+            // Decrypt the stored password
+            $decryptedPassword = decryptPassword($admin['password']);
+            if ($decryptedPassword !== false && $decryptedPassword === $password) {
+                return $admin;
+            }
         }
         return false;
-    } catch(PDOException $e) {
+    } catch (PDOException $e) {
         error_log("Login error: " . $e->getMessage());
         return false;
     }
@@ -54,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 'admin_id' => $admin_id
             ]);
 
-            // Set cookies
+            // Set cookies (secure and HTTP-only)
             setcookie('admin_remember', $token, $expiry, '/', '', true, true);
         }
 
@@ -65,6 +89,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $_SESSION['error'] = "Invalid credentials";
         header("Location: admin_login.php");
         exit();
+    }
+}
+
+// Optional: Auto-login with remember-me cookie
+if (!isset($_SESSION['admin_id']) && isset($_COOKIE['admin_remember'])) {
+    $token = $_COOKIE['admin_remember'];
+    $stmt = $pdo->prepare("SELECT * FROM admin_users WHERE remember_token = :token AND token_expiry > NOW()");
+    $stmt->execute(['token' => $token]);
+    $admin = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($admin) {
+        $_SESSION['admin_id'] = $admin['user_id'];
+        $_SESSION['admin_name'] = $admin['name'];
+        $_SESSION['is_admin'] = true;
+        header("Location: index.php");
+        exit();
+    } else {
+        // Invalid or expired token, clear cookie
+        setcookie('admin_remember', '', time() - 3600, '/', '', true, true);
     }
 }
 ?>

@@ -161,24 +161,6 @@ CREATE TABLE `school_users` (
 -- Table structure for table `users`
 --
 
-CREATE TABLE `users` (
-  `id` int(11) NOT NULL,
-  `first_name` varchar(50) NOT NULL,
-  `last_name` varchar(50) NOT NULL,
-  `email` varchar(100) NOT NULL,
-  `password` varchar(255) NOT NULL,
-  `role` enum('administrator','college','school') NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `users`
---
-
-INSERT INTO `users` (`id`, `first_name`, `last_name`, `email`, `password`, `role`, `created_at`) VALUES
-(1, 'John', 'Doe', 'john.doe@example.com', 'hashed_password1', 'administrator', '2025-01-15 15:59:39'),
-(2, 'Jane', 'Smith', 'jane.smith@example.com', 'hashed_password2', 'college', '2025-01-15 15:59:39'),
-(3, 'Robert', 'Brown', 'robert.brown@example.com', 'hashed_password3', 'school', '2025-01-15 15:59:39');
 
 --
 -- Indexes for dumped tables
@@ -259,3 +241,57 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+
+
+CREATE TABLE history_emp (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    emp_code VARCHAR(50),
+    institute_name VARCHAR(100),
+    department VARCHAR(100),
+    designation VARCHAR(100),
+    location VARCHAR(100),
+    joining_date DATE,
+    leaving_date DATE,
+    emp_category VARCHAR(50),
+    full_name VARCHAR(100),
+    gender VARCHAR(10),
+    blood_group VARCHAR(10),
+    nationality VARCHAR(50),
+    dob DATE,
+    father_name VARCHAR(100),
+    mother_name VARCHAR(100),
+    spouse_name VARCHAR(100),
+    mobile_number VARCHAR(15),
+    alt_number VARCHAR(15),
+    email VARCHAR(100),
+    address TEXT,
+    bank_name VARCHAR(100),
+    branch_name VARCHAR(100),
+    account_number VARCHAR(50),
+    ifsc_code VARCHAR(20),
+    pan_number VARCHAR(10),
+    aadhar_number VARCHAR(12),
+    salary_category VARCHAR(50),
+    other_salary_category VARCHAR(50),
+    duty_hours DECIMAL(5,2),
+    total_hours DECIMAL(5,2),
+    hours_per_day DECIMAL(5,2),
+    salary_pay_band VARCHAR(50),
+    basic_salary DECIMAL(15,2),
+    pf_number VARCHAR(50),
+    pf_join_date DATE,
+    ca DECIMAL(15,2),
+    da DECIMAL(15,2),
+    hra DECIMAL(15,2),
+    ta DECIMAL(15,2),
+    ma DECIMAL(15,2),
+    other_allowance DECIMAL(15,2),
+    profile_photo VARCHAR(255),
+    aadhar_copy VARCHAR(255),
+    pan_copy VARCHAR(255),
+    bank_copy VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    approval_status VARCHAR(20) DEFAULT 'pending'
+);

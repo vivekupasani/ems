@@ -1,19 +1,27 @@
 <?php
 session_start();
 
-
-if (isset($_SESSION['error'])) {
-  echo '<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">' . $_SESSION['error'] . '</div>';
-  unset($_SESSION['error']);
-}
-if (isset($_SESSION['success'])) {
-  echo '<div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative">' . $_SESSION['success'] . '</div>';
-  unset($_SESSION['success']);
+// Redirect to login if not authenticated
+if (!isset($_SESSION['school_id'])) {
+  $_SESSION['error'] = "Please log in to access the school dashboard.";
+  header("Location: school_login.php");
+  exit();
 }
 
 require_once 'config.php';
 
 $conn = connectDB();
+
+// Fetch the school name for the logged-in school user
+$school_id = $_SESSION['school_id'];
+$school_query = "SELECT school_name FROM school_users WHERE user_id = ?";
+$stmt = $conn->prepare($school_query);
+$stmt->bind_param("s", $school_id);
+$stmt->execute();
+$school_result = $stmt->get_result();
+$school = $school_result->fetch_assoc();
+$school_name = $school['school_name'] ?? '';
+$stmt->close();
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
   $errors = [];
@@ -85,94 +93,64 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $errors[] = "Invalid Aadhar number";
   }
 
-
-  // Assuming you are fetching the employee ID dynamically from a database or form submission
-  // Replace this with your logic to get the employee's ID (e.g., from a session or form input)
-  $employee_id = $_POST['id'] ?? null; // Example: get employee_id from POST request
-
-  // If employee ID is not found, show an error
-  if (!$employee_id) {
-    die('Employee ID is required.');
-  }
-
   // Directory for uploads
   $upload_dir = "uploads/";
+  $employee_id = null; // Will be set after insertion
 
-  // Create folder for the employee using the employee ID (e.g., uploads/{id}/)
-  $employee_dir = $upload_dir . $id . "/";
-  if (!file_exists($employee_dir)) {
-    mkdir($employee_dir, 0777, true); // Create the directory if it doesn't exist
-  }
-
-  // Required files to upload (with the desired renamed file names)
+  // Required files to upload
   $required_files = [
-    'profile_photo' => "{$id}.jpg",   // Profile photo will be renamed to {employee_id}.jpg
-    'aadhar_copy' => 'aadharcard.jpg',         // Aadhar card renamed to aadharcard.jpg
-    'pan_copy' => 'pancard.jpg',               // PAN card renamed to pancard.jpg
-    'bank_copy' => 'bankcopy.jpg'              // Bank copy renamed to bankcopy.jpg
+    'profile_photo' => "profile.jpg", // Will be renamed later
+    'aadhar_copy' => 'aadharcard.jpg',
+    'pan_copy' => 'pancard.jpg',
+    'bank_copy' => 'bankcopy.jpg'
   ];
 
   $uploaded_files = [];
-  $errors = [];
 
-  // Iterate over required files and process the upload
+  // Process file uploads
   foreach ($required_files as $input_name => $new_filename) {
     if (!isset($_FILES[$input_name]) || $_FILES[$input_name]['error'] === UPLOAD_ERR_NO_FILE) {
       $errors[] = ucfirst(str_replace('_', ' ', $input_name)) . " is required";
     } elseif ($_FILES[$input_name]['error'] === UPLOAD_ERR_OK) {
       $file_info = pathinfo($_FILES[$input_name]['name']);
       $file_ext = strtolower($file_info['extension']);
-
-      // Validate file type (you can modify this to include other formats if needed)
       $allowed_extensions = ['jpg', 'jpeg', 'png', 'pdf'];
+
       if (!in_array($file_ext, $allowed_extensions)) {
         $errors[] = "Invalid file type for " . str_replace('_', ' ', $input_name);
         continue;
       }
 
-      // Generate the full file path inside the employee's directory
-      $upload_path = $employee_dir . $new_filename;
-
-      // Move the uploaded file to the employee's folder
-      if (move_uploaded_file($_FILES[$input_name]['tmp_name'], $upload_path)) {
-        $uploaded_files[$input_name] = $new_filename;
+      $temp_path = $upload_dir . "temp_" . uniqid() . "." . $file_ext;
+      if (move_uploaded_file($_FILES[$input_name]['tmp_name'], $temp_path)) {
+        $uploaded_files[$input_name] = $temp_path;
       } else {
         $errors[] = "Error uploading " . str_replace('_', ' ', $input_name);
       }
     }
   }
 
-  // Handle errors (if any)
-  if (!empty($errors)) {
-    foreach ($errors as $error) {
-      echo $error . "<br>";
-    }
-  } else {
-    // Successful upload message
-    echo "Files uploaded successfully!";
-  }
-
   if (empty($errors)) {
     $stmt = $conn->prepare("INSERT INTO employees (
-      emp_code, institute_name, department, designation, location,
-      joining_date, leaving_date, emp_category, full_name, gender,
-      blood_group, nationality, dob, father_name, mother_name,
-      spouse_name, mobile_number, alt_number, email, address,
-      bank_name, branch_name, account_number, ifsc_code,
-      pan_number, aadhar_number, salary_category,
-      duty_hours, total_hours, hours_per_day, salary_pay_band,
-      basic_salary, ca, da, hra, ta, ma, other_allowance, pf_number, pf_join_date,
-      profile_photo, aadhar_copy, pan_copy, bank_copy
-  ) VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            institute_name, department, designation, location, joining_date, 
+            leaving_date, emp_category, full_name, gender, blood_group, 
+            nationality, dob, father_name, mother_name, spouse_name, 
+            mobile_number, alt_number, email, address, bank_name, 
+            branch_name, account_number, ifsc_code, pan_number, aadhar_number, 
+            salary_category, duty_hours, total_hours, hours_per_day, 
+            salary_pay_band, basic_salary, ca, da, hra, ta, ma, 
+            other_allowance, pf_number, pf_join_date, profile_photo, 
+            aadhar_copy, pan_copy, bank_copy
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
     $stmt->bind_param(
-      "ssssssssssssssssssssssssssssssssssssssssssss",
+      "sssssssssssssssssssssssssssssssssssssssss",
       $_POST['institute_name'],
       $_POST['department'],
       $_POST['designation'],
       $_POST['location'],
       $_POST['joining_date'],
-      $_POST['leaving_date'],
+      $_POST['leaving_date'] ?? null,
       $_POST['emp_category'],
       $_POST['full_name'],
       $_POST['gender'],
@@ -181,7 +159,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       $_POST['dob'],
       $_POST['father_name'],
       $_POST['mother_name'],
-      $_POST['spouse_name'],
+      $_POST['spouse_name'] ?? null,
       $_POST['mobile_number'],
       $_POST['alt_number'],
       $_POST['email'],
@@ -212,25 +190,48 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       $uploaded_files['bank_copy']
     );
 
-
     if ($stmt->execute()) {
-      echo "New record created successfully";
+      $employee_id = $conn->insert_id;
+      $employee_dir = $upload_dir . $employee_id . "/";
+      if (!file_exists($employee_dir)) {
+        mkdir($employee_dir, 0777, true);
+      }
+
+      foreach ($required_files as $input_name => $new_filename) {
+        $new_path = $employee_dir . ($input_name === 'profile_photo' ? "$employee_id.jpg" : $new_filename);
+        rename($uploaded_files[$input_name], $new_path);
+        $uploaded_files[$input_name] = $new_path;
+
+        $update_stmt = $conn->prepare("UPDATE employees SET $input_name = ? WHERE emp_code = ?");
+        $update_stmt->bind_param("si", $new_path, $employee_id);
+        $update_stmt->execute();
+        $update_stmt->close();
+      }
+
+      $_SESSION['success'] = "New employee record created successfully!";
     } else {
-      echo "Error: " . $stmt->error;
+      $_SESSION['error'] = "Error: " . $stmt->error;
     }
 
     $stmt->close();
   } else {
-    foreach ($errors as $error) {
-      echo $error . "<br>";
+    $_SESSION['error'] = implode("<br>", $errors);
+    foreach ($uploaded_files as $file) {
+      if (file_exists($file))
+        unlink($file);
     }
   }
+
+  header("Location: school_dashboard.php"); // Refresh the page
+  exit();
 }
 
-// Get all records at once since filtering will be done client-side
-$sql = "SELECT * FROM employees ";
-
-$result = mysqli_query($conn, $sql);
+// Fetch employees for this specific school
+$sql = "SELECT * FROM employees WHERE institute_name = ?";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("s", $school_name);
+$stmt->execute();
+$result = $stmt->get_result();
 ?>
 
 <!DOCTYPE html>
@@ -255,7 +256,8 @@ $result = mysqli_query($conn, $sql);
     <div class="max-w-7xl mx-auto px-4">
       <div class="flex justify-between items-center h-auto py-4 md:h-20">
         <!-- Menu Button for Mobile and Desktop -->
-        <button onclick="toggleDrawer(true)" class="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-blue-50 transition-colors duration-200 focus:outline-none hover:text-blue-600">
+        <button onclick="toggleDrawer(true)"
+          class="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-blue-50 transition-colors duration-200 focus:outline-none hover:text-blue-600">
           <i class="fas fa-bars text-2xl text-gray-600"></i>
         </button>
 
@@ -272,7 +274,9 @@ $result = mysqli_query($conn, $sql);
         </div>
 
         <div class="flex items-center">
-          <button class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-md flex items-center text-sm md:text-base" onclick="logout()">
+          <button
+            class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-md flex items-center text-sm md:text-base"
+            onclick="logout()">
             <i class="fas fa-sign-out-alt mr-1 md:mr-2"></i>
             <span class="hidden sm:inline">Logout</span>
           </button>
@@ -291,19 +295,22 @@ $result = mysqli_query($conn, $sql);
     class="fixed top-0 left-0 h-full w-64 md:w-80 bg-white shadow-2xl rounded-r-lg transform -translate-x-full transition-transform duration-300 ease-in-out z-50">
     <div class="p-4 flex justify-between items-center border-b">
       <h2 class="text-lg md:text-xl font-semibold">Navigation</h2>
-      <button onclick="toggleDrawer(false)" class="text-gray-500 focus:outline-none p-2 rounded-full hover:text-red-400 group-hover:scale-110 transition-transform duration-400">
+      <button onclick="toggleDrawer(false)"
+        class="text-gray-500 focus:outline-none p-2 rounded-full hover:text-red-400 group-hover:scale-110 transition-transform duration-400">
         <i class="fas fa-times text-2xl"></i>
       </button>
     </div>
     <div class="flex flex-col space-y-3 md:space-y-4 p-3 md:p-4">
       <a href="#" onclick="showSection('dashboard'); toggleDrawer(false);"
         class="flex items-center px-2 py-2 text-sm md:text-base text-gray-900 hover:text-blue-600 rounded-md transition-colors px-4 shadow-sm hover:shadow-md transition-all duration-200 text-gray-700 hover:bg-blue-50 group">
-        <i class="fas fa-chart-line hover:text-blue-500 group-hover:scale-110 transition-transform duration-200 mr-2"></i>
+        <i
+          class="fas fa-chart-line hover:text-blue-500 group-hover:scale-110 transition-transform duration-200 mr-2"></i>
         Dashboard
       </a>
       <a href="#" onclick="showSection('manage-employees'); toggleDrawer(false);"
         class="flex items-center px-2 py-2 text-sm md:text-base text-gray-900 hover:text-blue-600 rounded-md transition-colors px-4 shadow-sm hover:shadow-md transition-all duration-200 text-gray-700 hover:bg-blue-50 group">
-        <i class="fas fa-users-cog hover:text-blue-500 group-hover:scale-110 transition-transform duration-200 mr-2"></i>
+        <i
+          class="fas fa-users-cog hover:text-blue-500 group-hover:scale-110 transition-transform duration-200 mr-2"></i>
         Manage Employees
       </a>
       <a href="#" onclick="showSection('view-employees'); toggleDrawer(false);"
@@ -425,21 +432,24 @@ $result = mysqli_query($conn, $sql);
           <nav class="flex flex-wrap gap-3 sm:gap-6 py-2">
             <button onclick="showManageSection('appointment-form')"
               class="flex items-center px-4 py-2 rounded-lg bg-white shadow-sm hover:shadow-md transition-all duration-200 text-gray-700 hover:text-blue-600 hover:bg-blue-50 group">
-              <i class="fas fa-calendar-plus text-blue-500 group-hover:scale-110 transition-transform duration-200 mr-2"></i>
+              <i
+                class="fas fa-calendar-plus text-blue-500 group-hover:scale-110 transition-transform duration-200 mr-2"></i>
               <span class="hidden sm:inline font-medium">Appointment Form</span>
               <span class="inline sm:hidden font-medium">Add</span>
             </button>
 
             <button onclick="showManageSection('upload-excel')"
               class="flex items-center px-4 py-2 rounded-lg bg-white shadow-sm hover:shadow-md transition-all duration-200 text-gray-700 hover:text-green-600 hover:bg-green-50 group">
-              <i class="fas fa-file-excel text-green-500 group-hover:scale-110 transition-transform duration-200 mr-2"></i>
+              <i
+                class="fas fa-file-excel text-green-500 group-hover:scale-110 transition-transform duration-200 mr-2"></i>
               <span class="hidden sm:inline font-medium">Upload Excel</span>
               <span class="inline sm:hidden font-medium">Upload</span>
             </button>
 
             <button onclick="showManageSection('help')"
               class="flex items-center px-4 py-2 rounded-lg bg-white shadow-sm hover:shadow-md transition-all duration-200 text-gray-700 hover:text-orange-600 hover:bg-orange-50 group">
-              <i class="fas fa-question-circle text-orange-500 group-hover:scale-110 transition-transform duration-200 mr-2"></i>
+              <i
+                class="fas fa-question-circle text-orange-500 group-hover:scale-110 transition-transform duration-200 mr-2"></i>
               <span class="font-medium">Help</span>
             </button>
           </nav>
@@ -464,7 +474,8 @@ $result = mysqli_query($conn, $sql);
           }
           ?>
 
-          <form id="employeeForm" action="insert.php" method="POST" enctype="multipart/form-data" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <form id="employeeForm" action="insert.php" method="POST" enctype="multipart/form-data"
+            class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <!-- Header Section -->
             <div class="mb-6 md:mb-8">
               <h1 class="text-2xl md:text-3xl font-bold text-gray-900 flex items-center flex-wrap">
@@ -472,7 +483,8 @@ $result = mysqli_query($conn, $sql);
                 <span class="break-words">Add New Employee</span>
               </h1>
               <p class="mt-2 text-xs md:text-sm text-gray-600 max-w-3xl">
-                Fill in the information below to add a new employee to the system. All fields marked with * are required.
+                Fill in the information below to add a new employee to the system. All fields marked with * are
+                required.
               </p>
             </div>
 
@@ -486,30 +498,25 @@ $result = mysqli_query($conn, $sql);
               <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="space-y-2">
                   <label class="text-sm font-semibold text-gray-700" for="emp_code">Employee Code</label>
-                  <input type="text" name="emp_code" id="emp_code"
-                    placeholder="Auto-generated"
-                    readonly
+                  <input type="text" name="emp_code" id="emp_code" placeholder="Auto-generated" readonly
                     class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 cursor-not-allowed" />
                 </div>
 
                 <div class="space-y-2">
                   <label class="text-sm font-semibold text-gray-700">Institute Name</label>
-                  <input type="text" name="institute_name" required
-                    placeholder="Enter institute name"
+                  <input type="text" name="institute_name" required placeholder="Enter institute name"
                     class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200" />
                 </div>
 
                 <div class="space-y-2">
                   <label class="text-sm font-semibold text-gray-700">Department</label>
-                  <input type="text" name="department" required
-                    placeholder="Enter department"
+                  <input type="text" name="department" required placeholder="Enter department"
                     class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200" />
                 </div>
 
                 <div class="space-y-2">
                   <label class="text-sm font-semibold text-gray-700">Designation</label>
-                  <input type="text" name="designation" required
-                    placeholder="Enter designation"
+                  <input type="text" name="designation" required placeholder="Enter designation"
                     class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200" />
                 </div>
 
@@ -559,8 +566,7 @@ $result = mysqli_query($conn, $sql);
               <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="space-y-2">
                   <label class="text-sm font-semibold text-gray-700">Full Name</label>
-                  <input type="text" name="full_name" required
-                    placeholder="Enter full name"
+                  <input type="text" name="full_name" required placeholder="Enter full name"
                     class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200" />
                 </div>
 
@@ -609,22 +615,19 @@ $result = mysqli_query($conn, $sql);
 
                 <div class="space-y-2">
                   <label class="text-sm font-semibold text-gray-700">Father's Name</label>
-                  <input type="text" name="father_name" required
-                    placeholder="Enter father's name"
+                  <input type="text" name="father_name" required placeholder="Enter father's name"
                     class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200" />
                 </div>
 
                 <div class="space-y-2">
                   <label class="text-sm font-semibold text-gray-700">Mother's Name</label>
-                  <input type="text" name="mother_name" required
-                    placeholder="Enter mother's name"
+                  <input type="text" name="mother_name" required placeholder="Enter mother's name"
                     class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200" />
                 </div>
 
                 <div class="space-y-2">
                   <label class="text-sm font-semibold text-gray-700">Spouse Name</label>
-                  <input type="text" name="spouse_name"
-                    placeholder="Enter spouse name (if applicable)"
+                  <input type="text" name="spouse_name" placeholder="Enter spouse name (if applicable)"
                     class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200" />
                 </div>
 
@@ -644,15 +647,13 @@ $result = mysqli_query($conn, $sql);
 
                 <div class="space-y-2">
                   <label class="text-sm font-semibold text-gray-700">Email ID</label>
-                  <input type="email" name="email" required
-                    placeholder="Enter email address"
+                  <input type="email" name="email" required placeholder="Enter email address"
                     class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200" />
                 </div>
 
                 <div class="md:col-span-3 space-y-2">
                   <label class="text-sm font-semibold text-gray-700">Complete Residential Address</label>
-                  <textarea name="address" required rows="3"
-                    placeholder="Enter your complete residential address"
+                  <textarea name="address" required rows="3" placeholder="Enter your complete residential address"
                     class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"></textarea>
                 </div>
               </div>
@@ -682,16 +683,14 @@ $result = mysqli_query($conn, $sql);
 
                 <div class="space-y-2">
                   <label class="text-sm font-semibold text-gray-700">Branch Name</label>
-                  <input type="text" name="branch_name" required
-                    placeholder="Enter branch name"
+                  <input type="text" name="branch_name" required placeholder="Enter branch name"
                     class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200" />
                 </div>
 
                 <div class="space-y-2">
                   <label class="text-sm font-semibold text-gray-700">Account Number</label>
                   <div class="relative">
-                    <input type="text" name="account_number" required
-                      placeholder="Enter account number"
+                    <input type="text" name="account_number" required placeholder="Enter account number"
                       class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200" />
                     <div class="absolute inset-y-0 right-0 flex items-center px-3">
                       <i class="fas fa-lock text-gray-400"></i>
@@ -702,8 +701,7 @@ $result = mysqli_query($conn, $sql);
                 <div class="space-y-2">
                   <label class="text-sm font-semibold text-gray-700">IFSC Code</label>
                   <div class="relative">
-                    <input type="text" name="ifsc_code" required
-                      placeholder="Enter IFSC code"
+                    <input type="text" name="ifsc_code" required placeholder="Enter IFSC code"
                       class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 uppercase" />
                     <div class="absolute inset-y-0 right-0 flex items-center px-3">
                       <i class="fas fa-building-columns text-gray-400"></i>
@@ -725,8 +723,7 @@ $result = mysqli_query($conn, $sql);
                 <div class="space-y-2">
                   <label class="text-sm font-semibold text-gray-700">PAN Number</label>
                   <div class="relative">
-                    <input type="text" name="pan_number" required
-                      pattern="[A-Z]{5}[0-9]{4}[A-Z]{1}"
+                    <input type="text" name="pan_number" required pattern="[A-Z]{5}[0-9]{4}[A-Z]{1}"
                       placeholder="Enter PAN number"
                       class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 uppercase" />
                     <div class="absolute inset-y-0 right-0 flex items-center px-3">
@@ -739,8 +736,7 @@ $result = mysqli_query($conn, $sql);
                 <div class="space-y-2">
                   <label class="text-sm font-semibold text-gray-700">Aadhar Number</label>
                   <div class="relative">
-                    <input type="text" name="aadhar_number" required
-                      pattern="[0-9]{12}"
+                    <input type="text" name="aadhar_number" required pattern="[0-9]{12}"
                       placeholder="Enter Aadhar number"
                       class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
                       maxlength="12" />
@@ -777,8 +773,7 @@ $result = mysqli_query($conn, $sql);
                 <div class="space-y-2">
                   <label class="text-sm font-semibold text-gray-700">Duty Hours</label>
                   <div class="relative">
-                    <input type="number" name="duty_hours" required
-                      placeholder="Enter duty hours"
+                    <input type="number" name="duty_hours" required placeholder="Enter duty hours"
                       class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200" />
                     <div class="absolute inset-y-0 right-0 flex items-center px-3">
                       <i class="fas fa-clock text-gray-400"></i>
@@ -789,8 +784,7 @@ $result = mysqli_query($conn, $sql);
                 <div class="space-y-2">
                   <label class="text-sm font-semibold text-gray-700">Total Hours</label>
                   <div class="relative">
-                    <input type="number" name="total_hours" required
-                      placeholder="Enter total hours"
+                    <input type="number" name="total_hours" required placeholder="Enter total hours"
                       class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200" />
                     <div class="absolute inset-y-0 right-0 flex items-center px-3">
                       <i class="fas fa-hourglass text-gray-400"></i>
@@ -801,8 +795,7 @@ $result = mysqli_query($conn, $sql);
                 <div class="space-y-2">
                   <label class="text-sm font-semibold text-gray-700">Hours Per Day</label>
                   <div class="relative">
-                    <input type="number" name="hours_per_day" required
-                      placeholder="Enter hours per day"
+                    <input type="number" name="hours_per_day" required placeholder="Enter hours per day"
                       class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200" />
                     <div class="absolute inset-y-0 right-0 flex items-center px-3">
                       <i class="fas fa-business-time text-gray-400"></i>
@@ -814,8 +807,7 @@ $result = mysqli_query($conn, $sql);
                 <div class="space-y-2">
                   <label class="text-sm font-semibold text-gray-700">Salary Pay Band</label>
                   <div class="relative">
-                    <input type="text" name="salary_pay_band" required
-                      placeholder="Enter pay band"
+                    <input type="text" name="salary_pay_band" required placeholder="Enter pay band"
                       class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200" />
                     <div class="absolute inset-y-0 right-0 flex items-center px-3">
                       <i class="fas fa-layer-group text-gray-400"></i>
@@ -826,8 +818,7 @@ $result = mysqli_query($conn, $sql);
                 <div class="space-y-2">
                   <label class="text-sm font-semibold text-gray-700">Basic Salary</label>
                   <div class="relative">
-                    <input type="number" name="basic_salary" required
-                      placeholder="Enter basic salary"
+                    <input type="number" name="basic_salary" required placeholder="Enter basic salary"
                       class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200" />
                     <div class="absolute inset-y-0 right-0 flex items-center px-3">
                       <i class="fas fa-indian-rupee-sign text-gray-400"></i>
@@ -838,8 +829,7 @@ $result = mysqli_query($conn, $sql);
                 <div class="space-y-2">
                   <label class="text-sm font-semibold text-gray-700">PF Account Number (UAN)</label>
                   <div class="relative">
-                    <input type="text" name="pf_number"
-                      placeholder="Enter UAN number"
+                    <input type="text" name="pf_number" placeholder="Enter UAN number"
                       class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200" />
                     <div class="absolute inset-y-0 right-0 flex items-center px-3">
                       <i class="fas fa-id-badge text-gray-400"></i>
@@ -871,8 +861,7 @@ $result = mysqli_query($conn, $sql);
                 <div class="space-y-2">
                   <label class="text-sm font-semibold text-gray-700">City Allowance (CA)</label>
                   <div class="relative">
-                    <input type="number" name="ca"
-                      placeholder="Enter CA amount"
+                    <input type="number" name="ca" placeholder="Enter CA amount"
                       class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200" />
                     <div class="absolute inset-y-0 right-0 flex items-center px-3">
                       <i class="fas fa-indian-rupee-sign text-gray-400"></i>
@@ -883,8 +872,7 @@ $result = mysqli_query($conn, $sql);
                 <div class="space-y-2">
                   <label class="text-sm font-semibold text-gray-700">Dearness Allowance (DA)</label>
                   <div class="relative">
-                    <input type="number" name="da"
-                      placeholder="Enter DA amount"
+                    <input type="number" name="da" placeholder="Enter DA amount"
                       class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200" />
                     <div class="absolute inset-y-0 right-0 flex items-center px-3">
                       <i class="fas fa-indian-rupee-sign text-gray-400"></i>
@@ -895,8 +883,7 @@ $result = mysqli_query($conn, $sql);
                 <div class="space-y-2">
                   <label class="text-sm font-semibold text-gray-700">House Rent Allowance (HRA)</label>
                   <div class="relative">
-                    <input type="number" name="hra"
-                      placeholder="Enter HRA amount"
+                    <input type="number" name="hra" placeholder="Enter HRA amount"
                       class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200" />
                     <div class="absolute inset-y-0 right-0 flex items-center px-3">
                       <i class="fas fa-indian-rupee-sign text-gray-400"></i>
@@ -907,8 +894,7 @@ $result = mysqli_query($conn, $sql);
                 <div class="space-y-2">
                   <label class="text-sm font-semibold text-gray-700">Travelling Allowance (TA)</label>
                   <div class="relative">
-                    <input type="number" name="ta"
-                      placeholder="Enter TA amount"
+                    <input type="number" name="ta" placeholder="Enter TA amount"
                       class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200" />
                     <div class="absolute inset-y-0 right-0 flex items-center px-3">
                       <i class="fas fa-indian-rupee-sign text-gray-400"></i>
@@ -919,8 +905,7 @@ $result = mysqli_query($conn, $sql);
                 <div class="space-y-2">
                   <label class="text-sm font-semibold text-gray-700">Medical Allowance (MA)</label>
                   <div class="relative">
-                    <input type="number" name="ma"
-                      placeholder="Enter MA amount"
+                    <input type="number" name="ma" placeholder="Enter MA amount"
                       class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200" />
                     <div class="absolute inset-y-0 right-0 flex items-center px-3">
                       <i class="fas fa-indian-rupee-sign text-gray-400"></i>
@@ -931,8 +916,7 @@ $result = mysqli_query($conn, $sql);
                 <div class="space-y-2">
                   <label class="text-sm font-semibold text-gray-700">Other Allowance</label>
                   <div class="relative">
-                    <input type="number" name="other_allowance"
-                      placeholder="Enter other allowances"
+                    <input type="number" name="other_allowance" placeholder="Enter other allowances"
                       class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200" />
                     <div class="absolute inset-y-0 right-0 flex items-center px-3">
                       <i class="fas fa-indian-rupee-sign text-gray-400"></i>
@@ -952,7 +936,8 @@ $result = mysqli_query($conn, $sql);
               <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <!-- Profile Photo Upload -->
                 <div class="space-y-4">
-                  <div class="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition-colors">
+                  <div
+                    class="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition-colors">
                     <label class="flex flex-col items-center cursor-pointer">
                       <i class="fas fa-user-circle text-4xl text-gray-400 mb-2"></i>
                       <span class="text-sm font-semibold text-gray-700 mb-2">Profile Photo</span>
@@ -960,14 +945,16 @@ $result = mysqli_query($conn, $sql);
                       <span class="px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
                         Choose Photo
                       </span>
-                      <span class="text-xs text-gray-500 mt-2 text-center">Upload a clear passport size photograph</span>
+                      <span class="text-xs text-gray-500 mt-2 text-center">Upload a clear passport size
+                        photograph</span>
                     </label>
                   </div>
                 </div>
 
                 <!-- Aadhar Card Upload -->
                 <div class="space-y-4">
-                  <div class="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition-colors">
+                  <div
+                    class="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition-colors">
                     <label class="flex flex-col items-center cursor-pointer">
                       <i class="fas fa-id-card text-4xl text-gray-400 mb-2"></i>
                       <span class="text-sm font-semibold text-gray-700 mb-2">Aadhar Card</span>
@@ -982,7 +969,8 @@ $result = mysqli_query($conn, $sql);
 
                 <!-- PAN Card Upload -->
                 <div class="space-y-4">
-                  <div class="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition-colors">
+                  <div
+                    class="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition-colors">
                     <label class="flex flex-col items-center cursor-pointer">
                       <i class="fas fa-address-card text-4xl text-gray-400 mb-2"></i>
                       <span class="text-sm font-semibold text-gray-700 mb-2">PAN Card</span>
@@ -997,7 +985,8 @@ $result = mysqli_query($conn, $sql);
 
                 <!-- Bank Details Upload -->
                 <div class="space-y-4">
-                  <div class="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition-colors">
+                  <div
+                    class="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition-colors">
                     <label class="flex flex-col items-center cursor-pointer">
                       <i class="fas fa-university text-4xl text-gray-400 mb-2"></i>
                       <span class="text-sm font-semibold text-gray-700 mb-2">Bank Details</span>
@@ -1030,10 +1019,12 @@ $result = mysqli_query($conn, $sql);
             <div class="flex justify-end mt-8 mb-12">
               <button type="submit"
                 class="group relative inline-flex items-center justify-center px-8 py-3 text-lg font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-full overflow-hidden shadow-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                <span class="absolute inset-0 w-full h-full bg-white/10 group-hover:scale-x-100 group-hover:opacity-0 transition-transform duration-300"></span>
+                <span
+                  class="absolute inset-0 w-full h-full bg-white/10 group-hover:scale-x-100 group-hover:opacity-0 transition-transform duration-300"></span>
                 <i class="fas fa-save mr-2 group-hover:scale-110 transition-transform duration-300"></i>
                 <span class="relative">Save Employee Details</span>
-                <i class="fas fa-arrow-right ml-2 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300"></i>
+                <i
+                  class="fas fa-arrow-right ml-2 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300"></i>
               </button>
             </div>
 
@@ -1046,7 +1037,8 @@ $result = mysqli_query($conn, $sql);
           <div class="max-w-7xl mx-auto">
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
               <!-- Upload Area -->
-              <div class="border-2 border-dashed border-gray-200 rounded-xl p-6 md:p-8 transition-all duration-300 hover:border-blue-400 hover:bg-blue-50/50">
+              <div
+                class="border-2 border-dashed border-gray-200 rounded-xl p-6 md:p-8 transition-all duration-300 hover:border-blue-400 hover:bg-blue-50/50">
                 <div class="flex flex-col items-center space-y-4">
                   <div class="rounded-full bg-blue-100 p-3">
                     <i class="fas fa-file-excel text-3xl md:text-4xl text-blue-500"></i>
@@ -1152,10 +1144,7 @@ $result = mysqli_query($conn, $sql);
         <!-- Search and Date Range -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div class="relative">
-            <input
-              type="text"
-              id="employee-search"
-              placeholder="Search employees..."
+            <input type="text" id="employee-search" placeholder="Search employees..."
               class="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
             <span class="absolute left-3 top-2.5 text-gray-400">
               <i class="fas fa-search"></i>
@@ -1163,20 +1152,14 @@ $result = mysqli_query($conn, $sql);
           </div>
 
           <div class="flex space-x-4">
-            <input
-              type="date"
-              id="date-from"
+            <input type="date" id="date-from"
               class="flex-1 px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
-            <input
-              type="date"
-              id="date-to"
+            <input type="date" id="date-to"
               class="flex-1 px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
           </div>
 
           <div class="flex justify-end">
-            <button
-              id="exportButton"
-              onclick="exportToExcel()"
+            <button id="exportButton" onclick="exportToExcel()"
               class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
               <i class="fas fa-file-excel mr-2"></i>
               Export to Excel
@@ -1187,7 +1170,8 @@ $result = mysqli_query($conn, $sql);
         <!-- Filter Dropdowns -->
         <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
           <div>
-            <select id="filter-department" class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
+            <select id="filter-department"
+              class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
               <option value="">Department</option>
               <option value="it">IT</option>
               <option value="hr">HR</option>
@@ -1195,7 +1179,8 @@ $result = mysqli_query($conn, $sql);
             </select>
           </div>
           <div>
-            <select id="filter-designation" class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
+            <select id="filter-designation"
+              class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
               <option value="">Designation</option>
               <option value="manager">Manager</option>
               <option value="hod">HOD</option>
@@ -1204,7 +1189,8 @@ $result = mysqli_query($conn, $sql);
             </select>
           </div>
           <div>
-            <select id="filter-location" class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
+            <select id="filter-location"
+              class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
               <option value="">Location</option>
               <option value="dn">DN Campus</option>
               <option value="mogri">Mogri Campus</option>
@@ -1213,14 +1199,16 @@ $result = mysqli_query($conn, $sql);
             </select>
           </div>
           <div>
-            <select id="filter-category" class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
+            <select id="filter-category"
+              class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
               <option value="">Category</option>
               <option value="permanent">Permanent</option>
               <option value="adhoc">Adhoc</option>
             </select>
           </div>
           <div>
-            <select id="filter-salary" class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
+            <select id="filter-salary"
+              class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
               <option value="">Salary Category</option>
               <option value="adhoc_with_pf">Adhoc with PF</option>
               <option value="adhoc_without_pf">Adhoc without PF</option>
@@ -1229,7 +1217,8 @@ $result = mysqli_query($conn, $sql);
             </select>
           </div>
           <div>
-            <select id="filter-status" class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
+            <select id="filter-status"
+              class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
               <option value="">Status</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
@@ -1244,46 +1233,77 @@ $result = mysqli_query($conn, $sql);
               <tr>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
 
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee Code</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Institute Name</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Designation</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee Code
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Institute
+                  Name</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Designation
+                </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">location</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joining Date</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">leaving Date</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joining Date
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">leaving Date
+                </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full Name</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full Name
+                </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Blood Group</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nationality</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Blood Group
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nationality
+                </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DOB</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Father Name</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mother Name</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Spouse Name</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Father Name
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mother Name
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Spouse Name
+                </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mobile</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alt Number</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alt Number
+                </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bank Name</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Branch Name</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account Number</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IFSC Code</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PAN Number</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aadhar Number</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salary Category</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duty Hours</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Hours</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hours per Day</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salary Payband</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Basic Salary</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PF Number</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PF Join Date</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Conveyance Allowance</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bank Name
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Branch Name
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account
+                  Number</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IFSC Code
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PAN Number
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aadhar Number
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salary
+                  Category</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duty Hours
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Hours
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hours per Day
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salary
+                  Payband</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Basic Salary
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PF Number
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PF Join Date
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Conveyance
+                  Allowance</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DA</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">HRA</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medical Allowance</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Travelling Allowance</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Other Allowance</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medical
+                  Allowance</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Travelling
+                  Allowance</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Other
+                  Allowance</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200" id="employeeTableBody">
@@ -1292,14 +1312,12 @@ $result = mysqli_query($conn, $sql);
                   <tr class="hover:bg-gray-50">
                     <td class="px-6 py-4 whitespace-nowrap">
                       <div class="flex space-x-2">
-                        <button
-                          onclick="editEmployee(<?= $row['id'] ?>)"
+                        <button onclick="editEmployee(<?= $row['id'] ?>)"
                           class="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors">
                           <i class="fas fa-edit mr-1"></i>
                           Edit
                         </button>
-                        <button
-                          onclick="deleteEmployee(<?= $row['id'] ?>)"
+                        <button onclick="deleteEmployee(<?= $row['id'] ?>)"
                           class="inline-flex items-center px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors">
                           <i class="fas fa-trash-alt mr-1"></i>
                           Delete
@@ -1385,15 +1403,18 @@ $result = mysqli_query($conn, $sql);
 
         <!-- Right Side - Links -->
         <div class="grid grid-cols-1 justify-content-center md:flex md:space-x-8 gap-4">
-          <a href="#" class="text-sm text-gray-600 hover:text-blue-600 transition-colors duration-200 flex items-center space-x-1">
+          <a href="#"
+            class="text-sm text-gray-600 hover:text-blue-600 transition-colors duration-200 flex items-center space-x-1">
             <i class="fas fa-shield-alt text-gray-400"></i>
             <span>Privacy Policy</span>
           </a>
-          <a href="#" class="text-sm text-gray-600 hover:text-blue-600 transition-colors duration-200 flex items-center space-x-1">
+          <a href="#"
+            class="text-sm text-gray-600 hover:text-blue-600 transition-colors duration-200 flex items-center space-x-1">
             <i class="fas fa-file-contract text-gray-400"></i>
             <span>Terms of Service</span>
           </a>
-          <a href="#" class="text-sm text-gray-600 hover:text-blue-600 transition-colors duration-200 flex items-center space-x-1">
+          <a href="#"
+            class="text-sm text-gray-600 hover:text-blue-600 transition-colors duration-200 flex items-center space-x-1">
             <i class="fas fa-envelope text-gray-400"></i>
             <span>Contact Us</span>
           </a>
@@ -1411,28 +1432,95 @@ $result = mysqli_query($conn, $sql);
       </div>
     </div>
   </footer>
+  <script>
+    // Custom Toast Function
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
 
+      // Show the toast
+      setTimeout(() => {
+        toast.classList.add('show');
+      }, 100);
+
+      // Hide and remove the toast after 5 seconds
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+          document.body.removeChild(toast);
+        }, 300); // Wait for fade-out transition
+      }, 5000);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const updateForm = document.getElementById('updateEmployeeForm');
+
+      if (updateForm) {
+        updateForm.addEventListener('submit', function (e) {
+          e.preventDefault();
+
+          const formData = new FormData(this);
+
+          fetch('update.php', {
+            method: 'POST',
+            body: formData
+          })
+            .then(response => {
+              const contentType = response.headers.get('content-type');
+              if (contentType && contentType.includes('application/json')) {
+                return response.json();
+              }
+              // If not JSON, assume redirect handled by PHP
+              return response.text().then(() => {
+                // Show toast on success and redirect
+                showToast('Employee details updated successfully', 'success');
+                setTimeout(() => {
+                  window.location.href = '<?php echo $_SERVER['HTTP_REFERER'] ?? 'viewemp.php'; ?>';
+                }, 2000); // Redirect after 2 seconds to allow toast visibility
+                throw new Error('Non-JSON response'); // Skip further JSON processing
+              });
+            })
+            .then(data => {
+              if (data && data.success) {
+                showToast(data.message, 'success');
+                setTimeout(() => {
+                  window.location.href = '<?php echo $_SERVER['HTTP_REFERER'] ?? 'viewemp.php'; ?>';
+                }, 2000); // Redirect after 2 seconds
+              } else {
+                showToast(data.message || 'Error updating employee details', 'error');
+              }
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              showToast('An error occurred while updating employee details. Please try again.', 'error');
+            });
+        });
+      }
+    });
+  </script>
   <!-- script for upload excel file to database -->
   <script>
 
-async function logout() {
-    try {
+    async function logout() {
+      try {
         const response = await fetch('logout.php', {
-            method: 'POST'
+          method: 'POST'
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
-            window.location.href = 'default.php';
+          window.location.href = 'default.php';
         } else {
-            alert('Logout failed');
+          alert('Logout failed');
         }
-    } catch (error) {
+      } catch (error) {
         console.error('Logout error:', error);
         alert('An unexpected error occurred');
+      }
     }
-}
 
     // Check if XLSX is loaded
     if (typeof XLSX === 'undefined') {
@@ -1485,7 +1573,7 @@ async function logout() {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
 
-        reader.onload = function(e) {
+        reader.onload = function (e) {
           try {
             const data = e.target.result;
             const workbook = XLSX.read(data, {
@@ -1555,7 +1643,7 @@ async function logout() {
           }
         };
 
-        reader.onerror = function(error) {
+        reader.onerror = function (error) {
           reject(new Error('Error reading file: ' + error.message));
         };
 
@@ -1737,13 +1825,13 @@ async function logout() {
       }
     }
 
-    document.getElementById('upload-excel').addEventListener('submit', function(event) {
+    document.getElementById('upload-excel').addEventListener('submit', function (event) {
       event.preventDefault();
       var fileInput = document.getElementById('excel-upload');
       var file = fileInput.files[0];
       var reader = new FileReader();
 
-      reader.onload = function(e) {
+      reader.onload = function (e) {
         var data = new Uint8Array(e.target.result);
         var workbook = XLSX.read(data, {
           type: 'array'
@@ -1753,14 +1841,14 @@ async function logout() {
         var json = XLSX.utils.sheet_to_json(worksheet);
 
         fetch('upload.php', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              employees: json
-            })
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            employees: json
           })
+        })
           .then(response => response.text())
           .then(data => {
             try {
@@ -1782,75 +1870,75 @@ async function logout() {
       reader.readAsArrayBuffer(file);
     });
 
-    document.addEventListener('DOMContentLoaded', function() {
-    // Dashboard Data Fetch Function
-    async function fetchDashboardData() {
+    document.addEventListener('DOMContentLoaded', function () {
+      // Dashboard Data Fetch Function
+      async function fetchDashboardData() {
         try {
-            const response = await fetch('get_dashboard_data.php');
-            const data = await response.json();
+          const response = await fetch('get_dashboard_data.php');
+          const data = await response.json();
 
-            // Update Stats Cards
-            document.getElementById('totalEmployees').textContent = data.totalEmployees;
-            document.getElementById('activeEmployees').textContent = data.activeEmployees;
-            document.getElementById('totalDepartments').textContent = data.departments.length;
-            document.getElementById('totalSalary').textContent = '₹' + data.totalSalary.toLocaleString('en-IN');
+          // Update Stats Cards
+          document.getElementById('totalEmployees').textContent = data.totalEmployees;
+          document.getElementById('activeEmployees').textContent = data.activeEmployees;
+          document.getElementById('totalDepartments').textContent = data.departments.length;
+          document.getElementById('totalSalary').textContent = '₹' + data.totalSalary.toLocaleString('en-IN');
 
-            // Department Distribution Chart
-            const departmentCtx = document.getElementById('departmentChart');
-            new Chart(departmentCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: data.departments.map(d => d.department),
-                    datasets: [{
-                        data: data.departments.map(d => d.count),
-                        backgroundColor: [
-                            '#4B56D2', '#82C3EC', '#F6BA6F', 
-                            '#FFB4B4', '#95BDFF', '#B4E4FF'
-                        ]
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { position: 'right' }
-                    }
+          // Department Distribution Chart
+          const departmentCtx = document.getElementById('departmentChart');
+          new Chart(departmentCtx, {
+            type: 'doughnut',
+            data: {
+              labels: data.departments.map(d => d.department),
+              datasets: [{
+                data: data.departments.map(d => d.count),
+                backgroundColor: [
+                  '#4B56D2', '#82C3EC', '#F6BA6F',
+                  '#FFB4B4', '#95BDFF', '#B4E4FF'
+                ]
+              }]
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                legend: { position: 'right' }
+              }
+            }
+          });
+
+          // Salary Distribution Chart
+          const salaryCtx = document.getElementById('salaryChart');
+          new Chart(salaryCtx, {
+            type: 'bar',
+            data: {
+              labels: ['0-25K', '25K-50K', '50K-75K', '75K-100K', '100K+'],
+              datasets: [{
+                label: 'Employee Count',
+                data: data.salaryRanges,
+                backgroundColor: '#4B56D2'
+              }]
+            },
+            options: {
+              responsive: true,
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  ticks: { precision: 0 }
                 }
-            });
-
-            // Salary Distribution Chart
-            const salaryCtx = document.getElementById('salaryChart');
-            new Chart(salaryCtx, {
-                type: 'bar',
-                data: {
-                    labels: ['0-25K', '25K-50K', '50K-75K', '75K-100K', '100K+'],
-                    datasets: [{
-                        label: 'Employee Count',
-                        data: data.salaryRanges,
-                        backgroundColor: '#4B56D2'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: { 
-                            beginAtZero: true,
-                            ticks: { precision: 0 }
-                        }
-                    }
-                }
-            });
+              }
+            }
+          });
 
         } catch (error) {
-            console.error('Dashboard Data Fetch Error:', error);
+          console.error('Dashboard Data Fetch Error:', error);
         }
-    }
+      }
 
-    // Initial Data Load
-    fetchDashboardData();
+      // Initial Data Load
+      fetchDashboardData();
 
-    // Refresh Interval (5 minutes)
-    setInterval(fetchDashboardData, 300000);
-});
+      // Refresh Interval (5 minutes)
+      setInterval(fetchDashboardData, 300000);
+    });
   </script>
 </body>
 

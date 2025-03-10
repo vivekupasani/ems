@@ -1,9 +1,8 @@
 <?php
-// admin_process.php
 session_start();
 require_once 'config/database.php';
 
-// Define encryption constants (must match process_user.php)
+// Define encryption constants
 define('SECRET_KEY', 'Ek-Biladi-Jadi');
 define('CIPHER_METHOD', 'AES-256-CBC');
 
@@ -14,13 +13,12 @@ function decryptPassword($encryptedPassword) {
     if ($data === false) {
         return false; // Invalid base64 data
     }
-    
+
     $ivLength = openssl_cipher_iv_length(CIPHER_METHOD);
     $iv = substr($data, 0, $ivLength);
     $cipherText = substr($data, $ivLength);
-    
-    $decrypted = openssl_decrypt($cipherText, CIPHER_METHOD, $key, OPENSSL_RAW_DATA, $iv);
-    return $decrypted !== false ? $decrypted : false;
+
+    return openssl_decrypt($cipherText, CIPHER_METHOD, $key, OPENSSL_RAW_DATA, $iv);
 }
 
 // Function to validate admin credentials
@@ -31,7 +29,7 @@ function validateAdminLogin($pdo, $admin_id, $password) {
         $admin = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($admin) {
-            // Decrypt the stored password
+            // Decrypt stored password and compare
             $decryptedPassword = decryptPassword($admin['password']);
             if ($decryptedPassword !== false && $decryptedPassword === $password) {
                 return $admin;
@@ -58,22 +56,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     // Attempt login
     $admin = validateAdminLogin($pdo, $admin_id, $password);
-    
+
     if ($admin) {
         // Set session variables
         $_SESSION['admin_id'] = $admin['user_id'];
         $_SESSION['admin_name'] = $admin['name'];
         $_SESSION['is_admin'] = true;
 
+        // Secure session handling
+        session_regenerate_id(true);
+
         // Handle remember me
         if ($remember_me) {
             $token = bin2hex(random_bytes(32));
+            $hashedToken = password_hash($token, PASSWORD_DEFAULT);
             $expiry = time() + (30 * 24 * 60 * 60); // 30 days
 
-            // Store token in database
+            // Store hashed token in the database
             $stmt = $pdo->prepare("UPDATE admin_users SET remember_token = :token, token_expiry = :expiry WHERE user_id = :admin_id");
             $stmt->execute([
-                'token' => $token,
+                'token' => $hashedToken,
                 'expiry' => date('Y-m-d H:i:s', $expiry),
                 'admin_id' => $admin_id
             ]);
@@ -92,21 +94,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-// Optional: Auto-login with remember-me cookie
+// Auto-login with remember-me cookie
 if (!isset($_SESSION['admin_id']) && isset($_COOKIE['admin_remember'])) {
     $token = $_COOKIE['admin_remember'];
-    $stmt = $pdo->prepare("SELECT * FROM admin_users WHERE remember_token = :token AND token_expiry > NOW()");
-    $stmt->execute(['token' => $token]);
+    $stmt = $pdo->prepare("SELECT * FROM admin_users WHERE token_expiry > NOW()");
+    $stmt->execute();
     $admin = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($admin) {
+    if ($admin && password_verify($token, $admin['remember_token'])) {
         $_SESSION['admin_id'] = $admin['user_id'];
         $_SESSION['admin_name'] = $admin['name'];
         $_SESSION['is_admin'] = true;
+        session_regenerate_id(true);
         header("Location: index.php");
         exit();
     } else {
-        // Invalid or expired token, clear cookie
         setcookie('admin_remember', '', time() - 3600, '/', '', true, true);
     }
 }

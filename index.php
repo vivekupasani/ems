@@ -1,9 +1,9 @@
 <?php
 session_start();
 
-// Redirect to login if not authenticated
-if (!isset($_SESSION['admin_id'])) {
-  $_SESSION['error'] = "Please log in to access the admin dashboard.";
+// Secure admin authentication check
+if (!isset($_SESSION['admin_id']) || $_SESSION['is_admin'] !== true) {
+  $_SESSION['error'] = "Unauthorized access. Please log in.";
   header("Location: admin_login.php");
   exit();
 }

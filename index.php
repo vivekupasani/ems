@@ -1,17 +1,16 @@
 <?php
 session_start();
 
-<<<<<<< HEAD
 // Redirect to login if not authenticated
 if (!isset($_SESSION['admin_id'])) {
   $_SESSION['error'] = "Please log in to access the admin dashboard.";
   header("Location: default.php");
-=======
+}
 // Secure admin authentication check
 if (!isset($_SESSION['admin_id']) || $_SESSION['is_admin'] !== true) {
   $_SESSION['error'] = "Unauthorized access. Please log in.";
   header("Location: admin_login.php");
->>>>>>> fc188abadad7936832216e8dcc21d58c1fb0b90e
+
   exit();
 }
 
@@ -1147,7 +1146,7 @@ $result = mysqli_query($conn, $sql);
                   </p>
 
                   <!-- Download Sample Excel File Link -->
-                  <a href="sample_employee_data.xlsx" download
+                  <a href="Sample_Ces.xlsx" download
                     class="inline-flex items-center px-4 py-2.5 text-sm md:text-base font-medium text-blue-600 bg-blue-100 rounded-lg hover:bg-blue-200 hover:text-blue-700 focus:ring-4 focus:ring-blue-300 transition-all duration-200">
                     <i class="fas fa-download mr-2"></i>
                     Download Sample Excel File
@@ -2314,5 +2313,4 @@ window.onload = function() {
   </script>
 
 </body>
-
 </html>

@@ -1072,7 +1072,7 @@ $result = $stmt->get_result();
                   </p>
 
                   <!-- Download Sample Excel File Link -->
-                  <a href="sample_employee_data.xlsx" download
+                  <a href="Sample_Ces.xlsx" download
                     class="inline-flex items-center px-4 py-2.5 text-sm md:text-base font-medium text-blue-600 bg-blue-100 rounded-lg hover:bg-blue-200 hover:text-blue-700 focus:ring-4 focus:ring-blue-300 transition-all duration-200">
                     <i class="fas fa-download mr-2"></i>
                     Download Sample Excel File

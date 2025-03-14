@@ -1,193 +1,139 @@
 <?php
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+session_start(); // Start session to store status message
+// Include the database connection file
+include 'config.php';
 
-require_once 'config.php'; // Use require_once to ensure config is loaded
+$conn = connectDB();
+// Initialize the $employee array to store fetched data
+$employee = [];
 
-// Initialize response array for AJAX requests
-$response = ['success' => false, 'message' => ''];
-
-function sanitizeInput($data) {
-    return htmlspecialchars(trim(stripslashes($data)), ENT_QUOTES, 'UTF-8');
-}
-
-function formatDate($date) {
-    if (empty($date)) return null;
-    $d = DateTime::createFromFormat('Y-m-d', $date);
-    return $d && $d->format('Y-m-d') === $date ? $date : null;
-}
-
-function formatDecimal($value, $precision = 2) {
-    return is_numeric($value) && $value !== '' ? number_format((float)$value, $precision, '.', '') : null;
-}
-
-// Handle form submission
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    try {
-        $conn = connectDB();
-        if (!$conn) {
-            throw new Exception("Database connection failed");
-        }
-
-        if (!isset($_POST['id'])) {
-            throw new Exception("Employee ID is required");
-        }
-
-        $employeeData = [];
-        $employeeData['id'] = filter_var($_POST['id'], FILTER_VALIDATE_INT);
-        if ($employeeData['id'] === false || $employeeData['id'] <= 0) {
-            throw new Exception("Invalid employee ID");
-        }
-
-        $dateFields = ['joining_date', 'leaving_date', 'dob', 'pf_join_date'];
-        foreach ($dateFields as $field) {
-            $employeeData[$field] = isset($_POST[$field]) ? formatDate($_POST[$field]) : null;
-        }
-
-        $decimalFields = ['duty_hours', 'total_hours', 'hours_per_day', 'basic_salary', 'ca', 'da', 'hra', 'ta', 'ma', 'other_allowance'];
-        foreach ($decimalFields as $field) {
-            $employeeData[$field] = isset($_POST[$field]) ? formatDecimal($_POST[$field]) : null;
-        }
-
-        $textFields = [
-            'emp_code', 'institute_name', 'department', 'designation', 'location',
-            'emp_category', 'full_name', 'gender', 'blood_group', 'nationality',
-            'father_name', 'mother_name', 'spouse_name', 'mobile_number', 'alt_number',
-            'email', 'address', 'bank_name', 'branch_name', 'account_number', 'ifsc_code',
-            'pan_number', 'aadhar_number', 'salary_category', 'salary_pay_band', 'pf_number'
-        ];
-        foreach ($textFields as $field) {
-            $employeeData[$field] = isset($_POST[$field]) ? sanitizeInput($_POST[$field]) : null;
-        }
-
-        $query = "UPDATE employees SET 
-            emp_code=?, institute_name=?, department=?, designation=?,
-            location=?, joining_date=?, leaving_date=?, emp_category=?,
-            full_name=?, gender=?, blood_group=?, nationality=?,
-            dob=?, father_name=?, mother_name=?, spouse_name=?,
-            mobile_number=?, alt_number=?, email=?, address=?,
-            bank_name=?, branch_name=?, account_number=?, ifsc_code=?,
-            pan_number=?, aadhar_number=?, salary_category=?,
-            duty_hours=?, total_hours=?, hours_per_day=?, salary_pay_band=?,
-            basic_salary=?, pf_number=?, pf_join_date=?, ca=?, da=?, hra=?, ta=?, ma=?, other_allowance=?
-            WHERE id=?";
-
-        $stmt = $conn->prepare($query);
-        if (!$stmt) {
-            throw new Exception("Failed to prepare statement: " . $conn->error);
-        }
-
-        $stmt->bind_param(
-            "sssssssssssssssssssssssssssdddssdsddddddddi",
-            $employeeData['emp_code'],
-            $employeeData['institute_name'],
-            $employeeData['department'],
-            $employeeData['designation'],
-            $employeeData['location'],
-            $employeeData['joining_date'],
-            $employeeData['leaving_date'],
-            $employeeData['emp_category'],
-            $employeeData['full_name'],
-            $employeeData['gender'],
-            $employeeData['blood_group'],
-            $employeeData['nationality'],
-            $employeeData['dob'],
-            $employeeData['father_name'],
-            $employeeData['mother_name'],
-            $employeeData['spouse_name'],
-            $employeeData['mobile_number'],
-            $employeeData['alt_number'],
-            $employeeData['email'],
-            $employeeData['address'],
-            $employeeData['bank_name'],
-            $employeeData['branch_name'],
-            $employeeData['account_number'],
-            $employeeData['ifsc_code'],
-            $employeeData['pan_number'],
-            $employeeData['aadhar_number'],
-            $employeeData['salary_category'],
-            $employeeData['duty_hours'],
-            $employeeData['total_hours'],
-            $employeeData['hours_per_day'],
-            $employeeData['salary_pay_band'],
-            $employeeData['basic_salary'],
-            $employeeData['pf_number'],
-            $employeeData['pf_join_date'],
-            $employeeData['ca'],
-            $employeeData['da'],
-            $employeeData['hra'],
-            $employeeData['ta'],
-            $employeeData['ma'],
-            $employeeData['other_allowance'],
-            $employeeData['id']
-        );
-
-        if (!$stmt->execute()) {
-            throw new Exception("Error executing statement: " . $stmt->error);
-        }
-
-        $response['success'] = true;
-        $response['message'] = 'Employee details updated successfully';
-        $stmt->close();
-        $conn->close();
-
-        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
-            header('Content-Type: application/json');
-            echo json_encode($response);
-            exit;
-        }
-
-        header("Location: viewemp.php");
-        exit;
-
-    } catch (Exception $e) {
-        $response['success'] = false;
-        $response['message'] = 'Error: ' . $e->getMessage();
-
-        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
-            header('Content-Type: application/json');
-            echo json_encode($response);
-            exit;
-        }
-
-        echo "<!DOCTYPE html><html><body>";
-        echo "<h1>Error</h1><p>" . htmlspecialchars($e->getMessage()) . "</p>";
-        echo "<a href='javascript:history.back()'>Go Back</a>";
-        echo "</body></html>";
-        exit;
-    }
-}
-
-// Fetch employee data for display
-$employee = null;
+// Check if an ID is provided in the URL to fetch the employee data
 if (isset($_GET['id'])) {
-    try {
-        $conn = connectDB();
-        $id = filter_var($_GET['id'], FILTER_VALIDATE_INT);
-        if ($id === false || $id <= 0) {
-            throw new Exception("Invalid employee ID");
-        }
+    $id = $_GET['id'];
 
-        $stmt = $conn->prepare("SELECT * FROM employees WHERE id = ?");
-        if (!$stmt) {
-            throw new Exception("Failed to prepare SELECT statement: " . $conn->error);
-        }
-        $stmt->bind_param("i", $id);
-        $stmt->execute();
-        $result = $stmt->get_result();
+    // Fetch the employee data from the database
+    $sql = "SELECT * FROM employees WHERE id = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows > 0) {
         $employee = $result->fetch_assoc();
-        $stmt->close();
-        $conn->close();
-
-        if (!$employee) {
-            die("Employee not found. <a href='viewemp.php'>Go back</a>");
-        }
-    } catch (Exception $e) {
-        die("Error fetching employee: " . htmlspecialchars($e->getMessage()) . " <a href='viewemp.php'>Go back</a>");
+    } else {
+        echo "Employee not found.";
+        exit();
     }
-} else {
-    die("No employee ID provided. <a href='viewemp.php'>Go back</a>");
+
+    $stmt->close();
 }
+
+// Handle the form submission for updating employee data
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Retrieve the form data
+    $id = $_POST['id'];
+    $emp_code = $_POST['emp_code'];
+    $institute_name = $_POST['institute_name'];
+    $department = $_POST['department'];
+    $designation = $_POST['designation'];
+    $location = $_POST['location'];
+    $joining_date = $_POST['joining_date'];
+    $leaving_date = $_POST['leaving_date'];
+    $emp_category = $_POST['emp_category'];
+    $full_name = $_POST['full_name'];
+    $gender = $_POST['gender'];
+    $blood_group = $_POST['blood_group'];
+    $nationality = $_POST['nationality'];
+    $dob = $_POST['dob'];
+    $father_name = $_POST['father_name'];
+    $mother_name = $_POST['mother_name'];
+    $spouse_name = $_POST['spouse_name'];
+    $mobile_number = $_POST['mobile_number'];
+    $alt_number = $_POST['alt_number'];
+    $email = $_POST['email'];
+    $address = $_POST['address'];
+    $bank_name = $_POST['bank_name'];
+    $branch_name = $_POST['branch_name'];
+    $account_number = $_POST['account_number'];
+    $ifsc_code = $_POST['ifsc_code'];
+    $pan_number = $_POST['pan_number'];
+    $aadhar_number = $_POST['aadhar_number'];
+    $salary_category = $_POST['salary_category'];
+    $duty_hours = $_POST['duty_hours'];
+    $total_hours = $_POST['total_hours'];
+    $hours_per_day = $_POST['hours_per_day'];
+    $salary_pay_band = $_POST['salary_pay_band'];
+    $basic_salary = $_POST['basic_salary'];
+    $pf_number = $_POST['pf_number'];
+    $pf_join_date = $_POST['pf_join_date'];
+    $ca = $_POST['ca'];
+    $da = $_POST['da'];
+    $hra = $_POST['hra'];
+    $ma = $_POST['ma'];
+    $ta = $_POST['ta'];
+    $other_allowance = $_POST['other_allowance'];
+
+    // Prepare the SQL query to update the employee data
+    $sql = "UPDATE employees SET
+            emp_code = ?,
+            institute_name = ?,
+            department = ?,
+            designation = ?,
+            location = ?,
+            joining_date = ?,
+            leaving_date = ?,
+            emp_category = ?,
+            full_name = ?,
+            gender = ?,
+            blood_group = ?,
+            nationality = ?,
+            dob = ?,
+            father_name = ?,
+            mother_name = ?,
+            spouse_name = ?,
+            mobile_number = ?,
+            alt_number = ?,
+            email = ?,
+            address = ?,
+            bank_name = ?,
+            branch_name = ?,
+            account_number = ?,
+            ifsc_code = ?,
+            pan_number = ?,
+            aadhar_number = ?,
+            salary_category = ?,
+            duty_hours = ?,
+            total_hours = ?,
+            hours_per_day = ?,
+            salary_pay_band = ?,
+            basic_salary = ?,
+            pf_number = ?,
+            pf_join_date = ?,
+            ca = ?,
+            da = ?,
+            hra = ?,
+            ma = ?,
+            ta = ?,
+            other_allowance = ?
+            WHERE id = ?";
+
+    // Prepare and execute the statement
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("sssssssssssssssssssssssssssssssssssssssss",
+        $emp_code, $institute_name, $department, $designation, $location, $joining_date, $leaving_date, $emp_category, $full_name, $gender, $blood_group, $nationality, $dob, $father_name, $mother_name, $spouse_name, $mobile_number, $alt_number, $email, $address, $bank_name, $branch_name, $account_number, $ifsc_code, $pan_number, $aadhar_number, $salary_category, $duty_hours, $total_hours, $hours_per_day, $salary_pay_band, $basic_salary, $pf_number, $pf_join_date, $ca, $da, $hra, $ma, $ta, $other_allowance, $id);
+
+    if ($stmt->execute()) {
+        $_SESSION['update_status'] = 'success';
+    } else {
+        $_SESSION['update_status'] = 'error';
+    }
+
+    // Close the statement
+    $stmt->close();
+}
+
+// Close the database connection
+$conn->close();
 ?>
 
 <!DOCTYPE html>
@@ -198,8 +144,36 @@ if (isset($_GET['id'])) {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/js/all.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <title>Update Employee</title>
+    <style>
+        /* Toaster styles */
+        .toaster {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            color: white;
+            z-index: 1000;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .toaster.success {
+            background-color: #10B981;
+        }
+        .toaster.error {
+            background-color: #EF4444;
+        }
+        .toaster.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+    </style>
 </head>
 <body class="min-h-screen flex flex-col bg-gray-50">
+    <!-- Toaster Notification -->
+    <div id="toaster" class="toaster hidden">
+        <span id="toaster-message"></span>
+    </div>
+
     <div id="update-form" class="manage-section mt-6 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <form id="updateEmployeeForm" class="space-y-8" method="POST" action="update.php">
             <div class="bg-white p-6 rounded-lg shadow-md">
@@ -447,33 +421,32 @@ if (isset($_GET['id'])) {
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const updateForm = document.getElementById('updateEmployeeForm');
-            if (updateForm) {
-                updateForm.addEventListener('submit', function (e) {
-                    e.preventDefault();
-                    const formData = new FormData(this);
+        function showToaster(message, type, redirect = false) {
+            const toaster = document.getElementById('toaster');
+            const toasterMessage = document.getElementById('toaster-message');
+            
+            toasterMessage.textContent = message;
+            toaster.className = `toaster ${type}`;
+            toaster.classList.remove('hidden');
+            
+            setTimeout(() => {
+                toaster.classList.add('hidden');
+                if (redirect) {
+                    window.location.href = 'index.php#view-employees';
+                }
+            }, 3000);
+        }
 
-                    fetch('update.php', {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert(data.message);
-                            window.location.href = 'viewemp.php';
-                        } else {
-                            alert(data.message || 'Error updating employee details');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('An error occurred while updating employee details. Please try again.');
-                    });
-                });
+        <?php
+        if (isset($_SESSION['update_status'])) {
+            if ($_SESSION['update_status'] === 'success') {
+                echo "showToaster('Employee details updated successfully!', 'success', true);";
+            } else if ($_SESSION['update_status'] === 'error') {
+                echo "showToaster('Error updating employee details.', 'error', true);";
             }
-        });
+            unset($_SESSION['update_status']); // Clear the session variable after use
+        }
+        ?>
     </script>
 </body>
 </html>

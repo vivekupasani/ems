@@ -1063,76 +1063,86 @@ $result = $stmt->get_result();
                   <p class="text-xs md:text-sm text-gray-500">
                     Supported formats: .xlsx, .xls
                   </p>
-                </div>
-              </div>
 
-              <!-- Preview Section -->
-              <div id="preview-section" class="mt-8 hidden">
-                <div class="mb-6">
-                  <h4 class="text-lg md:text-xl font-semibold text-gray-800 mb-2">Data Preview</h4>
-                  <p class="text-sm text-gray-600">Review your data before uploading</p>
-                </div>
-
-                <div class="overflow-x-auto rounded-lg border border-gray-200">
-                  <table id="preview-table" class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50"></thead>
-                    <tbody class="divide-y divide-gray-200"></tbody>
-                  </table>
-                </div>
-
-                <div class="mt-6 flex flex-col sm:flex-row gap-3">
-                  <button id="upload-btn"
-                    class="inline-flex items-center justify-center px-4 py-2.5 text-sm md:text-base font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 focus:ring-4 focus:ring-green-300 transition-all duration-200">
-                    <i class="fas fa-cloud-upload-alt mr-2"></i>
-                    Upload Data
-                  </button>
-                  <button id="cancel-btn"
-                    class="inline-flex items-center justify-center px-4 py-2.5 text-sm md:text-base font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 focus:ring-4 focus:ring-gray-300 transition-all duration-200">
-                    <i class="fas fa-times mr-2"></i>
-                    Cancel
-                  </button>
+                  <!-- Download Sample Excel File Link -->
+                  <a href="sample_employee_data.xlsx" download
+                    class="inline-flex items-center px-4 py-2.5 text-sm md:text-base font-medium text-blue-600 bg-blue-100 rounded-lg hover:bg-blue-200 hover:text-blue-700 focus:ring-4 focus:ring-blue-300 transition-all duration-200">
+                    <i class="fas fa-download mr-2"></i>
+                    Download Sample Excel File
+                  </a>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Help Sub-section -->
-        <div id="help" class="manage-section mt-6 hidden">
-          <div class="space-y-4 max-w-7xl mx-auto">
-            <div class="bg-gray-50 p-4 rounded-lg">
-              <h3 class="text-lg font-medium text-gray-900 mb-2">FAQ</h3>
-              <div class="space-y-3">
-                <div>
-                  <h4 class="font-medium text-gray-700">
-                    How do I schedule an appointment?
-                  </h4>
-                  <p class="text-sm text-gray-600">
-                    Use the Appointment Form section to schedule individual
-                    appointments or use the Excel upload feature for bulk
-                    scheduling.
-                  </p>
-                </div>
-                <div>
-                  <h4 class="font-medium text-gray-700">
-                    What format should my Excel file be in?
-                  </h4>
-                  <p class="text-sm text-gray-600">
-                    Your Excel file should include columns for Employee Name,
-                    Department, Date, Time, and Purpose. Download our template
-                    for the correct format.
-                  </p>
-                </div>
-                <div>
-                  <h4 class="font-medium text-gray-700">Need more help?</h4>
-                  <p class="text-sm text-gray-600">
-                    Contact our support team at support@appointease.com
-                  </p>
-                </div>
+        <!-- Preview Section -->
+        <div id="preview-section" class="mt-8 hidden">
+          <div class="mb-6">
+            <h4 class="text-lg md:text-xl font-semibold text-gray-800 mb-2">Data Preview</h4>
+            <p class="text-sm text-gray-600">Review your data before uploading</p>
+          </div>
+
+          <div class="overflow-x-auto rounded-lg border border-gray-200">
+            <table id="preview-table" class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50"></thead>
+              <tbody class="divide-y divide-gray-200"></tbody>
+            </table>
+          </div>
+
+          <div class="mt-6 flex flex-col sm:flex-row gap-3">
+            <button id="upload-btn"
+              class="inline-flex items-center justify-center px-4 py-2.5 text-sm md:text-base font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 focus:ring-4 focus:ring-green-300 transition-all duration-200">
+              <i class="fas fa-cloud-upload-alt mr-2"></i>
+              Upload Data
+            </button>
+            <button id="cancel-btn"
+              class="inline-flex items-center justify-center px-4 py-2.5 text-sm md:text-base font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 focus:ring-4 focus:ring-gray-300 transition-all duration-200">
+              <i class="fas fa-times mr-2"></i>
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+      </div>
+      </div>
+
+      <!-- Help Sub-section -->
+      <div id="help" class="manage-section mt-6 hidden">
+        <div class="space-y-4 max-w-7xl mx-auto">
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <h3 class="text-lg font-medium text-gray-900 mb-2">FAQ</h3>
+            <div class="space-y-3">
+              <div>
+                <h4 class="font-medium text-gray-700">
+                  How do I schedule an appointment?
+                </h4>
+                <p class="text-sm text-gray-600">
+                  Use the Appointment Form section to schedule individual
+                  appointments or use the Excel upload feature for bulk
+                  scheduling.
+                </p>
+              </div>
+              <div>
+                <h4 class="font-medium text-gray-700">
+                  What format should my Excel file be in?
+                </h4>
+                <p class="text-sm text-gray-600">
+                  Your Excel file should include columns for Employee Name,
+                  Department, Date, Time, and Purpose. Download our template
+                  for the correct format.
+                </p>
+              </div>
+              <div>
+                <h4 class="font-medium text-gray-700">Need more help?</h4>
+                <p class="text-sm text-gray-600">
+                  Contact our support team at support@appointease.com
+                </p>
               </div>
             </div>
           </div>
         </div>
+      </div>
       </div>
     </section>
 
@@ -1939,6 +1949,35 @@ $result = $stmt->get_result();
       // Refresh Interval (5 minutes)
       setInterval(fetchDashboardData, 300000);
     });
+    // Logout function
+    function logout() {
+      // Call logout.php to destroy the session
+      fetch('logout.php', { method: 'POST', credentials: 'include' })
+        .then(() => {
+          alert("Are You Sure..logout?");
+          window.location.href = 'default.php'; // Redirect to default.php after logout
+        })
+        .catch(error => {
+          console.error('Logout failed:', error);
+          alert("Are You Sure..logout?");
+          window.location.href = 'default.php'; // Fallback redirect
+        });
+    }
+
+    // Auto-logout after 1 minute of inactivity (60,000 ms)
+    let inactivityTimeout;
+    function resetInactivityTimer() {
+      clearTimeout(inactivityTimeout);
+      inactivityTimeout = setTimeout(logout, 60000); // 60 seconds
+    }
+
+    // Reset timer on user activity
+    window.onload = function () {
+      resetInactivityTimer();
+      document.addEventListener('mousemove', resetInactivityTimer);
+      document.addEventListener('keypress', resetInactivityTimer);
+      document.addEventListener('click', resetInactivityTimer);
+    };
   </script>
 </body>
 

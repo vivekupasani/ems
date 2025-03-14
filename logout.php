@@ -1,9 +1,12 @@
 <?php
+// logout.php
 session_start();
 
-$_SESSION = array();
+// Destroy the session immediately
+session_unset();
 session_destroy();
 
-echo json_encode(['success' => true]);
+// Redirect to default.php
+header("Location: default.php");
 exit();
 ?>

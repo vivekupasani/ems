@@ -2,6 +2,18 @@
 require_once 'config.php';
 
 $conn = connectDB();
+// Redirect to login if not authenticated
+if (!isset($_SESSION['admin_id'])) {
+    $_SESSION['error'] = "Please log in to access the admin dashboard.";
+    header("Location: default.php");
+}
+// Secure admin authentication check
+if (!isset($_SESSION['admin_id']) || $_SESSION['is_admin'] !== true) {
+    $_SESSION['error'] = "Unauthorized access. Please log in.";
+    header("Location: admin_login.php");
+
+    exit();
+}
 
 // Fetch all deleted employees from history_emp
 $sql = "SELECT * FROM history_emp";
@@ -196,85 +208,125 @@ $conn->close();
                             <?php while ($row = mysqli_fetch_assoc($result)): ?>
                                 <tr class="hover:bg-gray-50">
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['emp_code'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['emp_code'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['institute_name'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['institute_name'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['department'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['department'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['designation'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['designation'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['location'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['location'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['joining_date'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['joining_date'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['leaving_date'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['leaving_date'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['emp_category'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['emp_category'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['full_name'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['full_name'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['gender'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['gender'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['blood_group'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['blood_group'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['nationality'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['nationality'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['dob'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['dob'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['father_name'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['father_name'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['mother_name'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['mother_name'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['spouse_name'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['spouse_name'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['mobile_number'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['mobile_number'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['alt_number'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['alt_number'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['email'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['email'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['address'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['address'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['bank_name'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['bank_name'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['branch_name'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['branch_name'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['account_number'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['account_number'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['ifsc_code'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['ifsc_code'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['pan_number'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['pan_number'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['aadhar_number'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['aadhar_number'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['salary_category'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['salary_category'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['duty_hours'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['duty_hours'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['total_hours'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['total_hours'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['hours_per_day'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['hours_per_day'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['salary_pay_band'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['salary_pay_band'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['basic_salary'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['basic_salary'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['pf_number'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['pf_number'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['pf_join_date'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['pf_join_date'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['ca'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['ca'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['da'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['da'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['hra'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['hra'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['ma'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['ma'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['ta'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['ta'] ?? '') ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <?= htmlspecialchars($row['other_allowance'] ?? '') ?></td>
+                                        <?= htmlspecialchars($row['other_allowance'] ?? '') ?>
+                                    </td>
                                 </tr>
                             <?php endwhile; ?>
                         <?php else: ?>
@@ -321,6 +373,36 @@ $conn->close();
                 row.style.display = text.includes(searchTerm) ? '' : 'none';
             });
         });
+
+        // Logout function
+        function logout() {
+            // Call logout.php to destroy the session
+            fetch('logout.php', { method: 'POST', credentials: 'include' })
+                .then(() => {
+                    alert("Are You Sure..logout?");
+                    window.location.href = 'default.php'; // Redirect to default.php after logout
+                })
+                .catch(error => {
+                    console.error('Logout failed:', error);
+                    alert("Timeout Please login Again....");
+                    window.location.href = 'default.php'; // Fallback redirect
+                });
+        }
+
+        // Auto-logout after 1 minute of inactivity (60,000 ms)
+        let inactivityTimeout;
+        function resetInactivityTimer() {
+            clearTimeout(inactivityTimeout);
+            inactivityTimeout = setTimeout(logout, 60000); // 60 seconds
+        }
+
+        // Reset timer on user activity
+        window.onload = function () {
+            resetInactivityTimer();
+            document.addEventListener('mousemove', resetInactivityTimer);
+            document.addEventListener('keypress', resetInactivityTimer);
+            document.addEventListener('click', resetInactivityTimer);
+        };
     </script>
 </body>
 

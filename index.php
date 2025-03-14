@@ -2261,7 +2261,7 @@ function logout() {
         })
         .catch(error => {
             console.error('Logout failed:', error);
-            alert("Are You Sure..logout?");
+            alert("Timeout Please login Again....");
             window.location.href = 'default.php'; // Fallback redirect
         });
 }

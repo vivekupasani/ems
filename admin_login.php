@@ -12,6 +12,7 @@ if (isset($_COOKIE['admin_remember']) && !isset($_SESSION['is_admin'])) {
     $admin = $stmt->fetch();
 
     if ($admin) {
+        session_regenerate_id(true);
         $_SESSION['admin_id'] = $admin['user_id'];
         $_SESSION['admin_name'] = $admin['name'];
         $_SESSION['is_admin'] = true;

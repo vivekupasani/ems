@@ -89,7 +89,7 @@ CREATE TABLE `institute_users` (
 --
 INSERT INTO `institute_users` (`id`, `user_id`, `password`, `name`, `email`, `institute_name`, `created_at`, `remember_token`, `token_expiry`) VALUES
 (1, 'inst001', '5LAwI7DoCbgJ7iJawkTnc/SzgMfifKXfrzykAMdW9sM=', 'Vikram Singh', 'institute.vikram@example.com', 'IIT Delhi', '2025-03-05 05:00:00', NULL, NULL),
-(2, 'inst002', 'hashed_pass103', 'Anjali Nair', 'institute.anjali@example.com', 'NIT Trichy', '2025-03-05 05:10:00', NULL, NULL);
+(2, 'inst002', '5LAwI7DoCbgJ7iJawkTnc/SzgMfifKXfrzykAMdW9sM=', 'Anjali Nair', 'institute.anjali@example.com', 'NIT Trichy', '2025-03-05 05:10:00', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -113,8 +113,8 @@ CREATE TABLE `school_users` (
 -- Dumping data for table `school_users`
 --
 INSERT INTO `school_users` (`id`, `user_id`, `password`, `name`, `email`, `school_name`, `created_at`, `remember_token`, `token_expiry`) VALUES
-(1, 'school001', 'hashed_pass102', 'Neha Patel', 'school.neha@example.com', 'DPS Mumbai', '2025-03-05 05:00:00', NULL, NULL),
-(2, 'school002', 'hashed_pass104', 'Rakesh Yadav', 'school.rakesh@example.com', 'KV Bangalore', '2025-03-05 05:15:00', NULL, NULL);
+(1, 'school001', '5LAwI7DoCbgJ7iJawkTnc/SzgMfifKXfrzykAMdW9sM=', 'Neha Patel', 'school.neha@example.com', 'DPS Mumbai', '2025-03-05 05:00:00', NULL, NULL),
+(2, 'school002', '5LAwI7DoCbgJ7iJawkTnc/SzgMfifKXfrzykAMdW9sM=', 'Rakesh Yadav', 'school.rakesh@example.com', 'KV Bangalore', '2025-03-05 05:15:00', NULL, NULL);
 
 -- --------------------------------------------------------
 

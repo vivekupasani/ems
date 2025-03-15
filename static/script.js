@@ -177,7 +177,7 @@
 
 
     function editEmployee(id) {
-        window.location.href = `update.php?id=${id}`;
+        window.location.href = `update-ins.php?id=${id}`;
     }
 
     function deleteEmployee(id) {
@@ -189,56 +189,3 @@
 
    
     // Function to export employee data to Excel
-function exportToExcel() {
-  // Get all visible rows from the table (respecting current filters)
-  const table = document.getElementById('employeeTable');
-  const rows = Array.from(table.querySelectorAll('tbody tr')).filter(row => 
-    row.style.display !== 'none'
-  );
-  
-  // Get headers from the table
-  const headers = Array.from(table.querySelectorAll('thead th')).map(th => 
-    th.textContent.trim()
-  ).filter(header => 
-    header !== 'Actions' // Exclude the Actions column
-  );
-
-  // Create data array for Excel
-  const data = [headers];
-  
-  // Add visible row data
-  rows.forEach(row => {
-    const rowData = Array.from(row.querySelectorAll('td')).map(td => 
-      td.textContent.trim()
-    );
-    // Remove the last column (Actions column)
-    rowData.pop();
-    data.push(rowData);
-  });
-
-  // Create worksheet
-  const ws = XLSX.utils.aoa_to_sheet(data);
-
-  // Set column widths
-  const colWidths = headers.map(() => ({ wch: 15 })); // Default width of 15 for all columns
-  ws['!cols'] = colWidths;
-
-  // Create workbook
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Employee Data");
-
-  // Generate filename with current date
-  const date = new Date().toISOString().split('T')[0];
-  const fileName = `Employee_Data_${date}.xlsx`;
-
-  // Save file
-  try {
-    XLSX.writeFile(wb, fileName);
-  } catch (error) {
-    console.error('Error exporting to Excel:', error);
-    alert('An error occurred while exporting to Excel. Please try again.');
-  }
-}
-
-// Add event listener to export button
-document.getElementById('exportButton').addEventListener('click', exportToExcel);

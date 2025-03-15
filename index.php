@@ -222,7 +222,7 @@ $result = mysqli_query($conn, $sql);
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="static/script.js"></script>
   <script src="js/validation.js"></script>
-  <!-- <script src="js/toast.js"></script> -->
+  <script src="js/toast.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <!-- <link rel="stylesheet" href="static/style.css"> -->
 </head>

@@ -2,7 +2,7 @@
 session_start();
 
 // Redirect to login if not authenticated
-if (!isset($_SESSION['school_id'])) {
+if (!isset($_SESSION['institute_id'])) {
   $_SESSION['error'] = "Please log in to access the admin dashboard.";
   header("Location: default.php");
   exit();
@@ -16,17 +16,28 @@ require_once 'config.php';
 
 $conn = connectDB();
 
-// Fetch the school name for the logged-in school user
-$school_id = $_SESSION['school_id'];
-$institute_query = "SELECT institute_name FROM institute_users WHERE user_id = ?";
-$stmt = $conn->prepare($institute_query);
-$stmt->bind_param("s", $school_id);
-$stmt->execute();
-$institute_result = $stmt->get_result();
-$institute = $institute_result->fetch_assoc();
-$institute_name = $institute['institute_name'] ?? 'Unknown Institute';
-$stmt->close();
-
+// Fetch the institude name for the logged-in school user
+$institute_id = $_SESSION['institute_id'] ?? null;
+if ($institute_id) {
+  $institute_query = "SELECT institute_name FROM institute_users WHERE user_id = ?";
+  $stmt = $conn->prepare($institute_query);
+  if ($stmt) {
+    $stmt->bind_param("s", $institute_id);
+    $stmt->execute();
+    $institute_result = $stmt->get_result();
+    if ($institute_result->num_rows > 0) {
+      $institute = $institute_result->fetch_assoc();
+      $institute_name = $institute['institute_name'];
+    } else {
+      $institute_name = 'Unknown Institute';
+    }
+    $stmt->close();
+  } else {
+    $institute_name = 'Error: Unable to prepare statement';
+  }
+} else {
+  $institute_name = 'Error: Institute ID not set in session';
+}
 
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -73,31 +84,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     'pf_join_date'
   ];
 
-  foreach ($required_fields as $field) {
-    if (empty($_POST[$field])) {
-      $errors[] = ucfirst(str_replace('_', ' ', $field)) . " is required";
-    }
-  }
-
-  // Validate email format
-  if (!empty($_POST['email']) && !filter_var($_POST['email'], FILTER_VALIDATE_EMAIL)) {
-    $errors[] = "Invalid email format";
-  }
-
-  // Validate mobile number
-  if (!empty($_POST['mobile_number']) && !preg_match("/^[0-9]{10}$/", $_POST['mobile_number'])) {
-    $errors[] = "Invalid mobile number";
-  }
-
-  // Validate PAN number
-  if (!empty($_POST['pan_number']) && !preg_match("/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/", $_POST['pan_number'])) {
-    $errors[] = "Invalid PAN number";
-  }
-
-  // Validate Aadhar number
-  if (!empty($_POST['aadhar_number']) && !preg_match("/^[0-9]{12}$/", $_POST['aadhar_number'])) {
-    $errors[] = "Invalid Aadhar number";
-  }
 
   // Directory for uploads
   $upload_dir = "uploads/";
@@ -228,14 +214,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
   }
 
-  header("Location: school_dashboard.php"); // Refresh the page
+  header("Location: institute_dashboard.php"); // Refresh the page
   exit();
 }
 
 // Fetch employees for this specific school
 $sql = "SELECT * FROM employees WHERE institute_name = ?";
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("s", $school_name);
+$stmt->bind_param("s", $institute_name);
 $stmt->execute();
 $result = $stmt->get_result();
 ?>
@@ -253,6 +239,9 @@ $result = $stmt->get_result();
   <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.1/flowbite.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="static/script.js"></script>
+  <script src="js/validation.js"></script>
+  <script src="js/toast.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <!-- <link rel="stylesheet" href="static/style.css"> -->
 </head>
 
@@ -1740,7 +1729,7 @@ $result = $stmt->get_result();
         uploadBtn.disabled = true;
         uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Uploading...';
 
-        const response = await fetch('upload.php', {
+        const response = await fetch('upload-ins.php', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1826,44 +1815,66 @@ $result = $stmt->get_result();
 
     document.getElementById('upload-excel').addEventListener('submit', function (event) {
       event.preventDefault();
-      var fileInput = document.getElementById('excel-upload');
-      var file = fileInput.files[0];
-      var reader = new FileReader();
+
+      const fileInput = document.getElementById('excel-upload');
+      const file = fileInput.files[0];
+
+      if (!file) {
+        alert('Please select an Excel file to upload');
+        return;
+      }
+
+      const reader = new FileReader();
 
       reader.onload = function (e) {
-        var data = new Uint8Array(e.target.result);
-        var workbook = XLSX.read(data, {
-          type: 'array'
-        });
-        var sheetName = workbook.SheetNames[0];
-        var worksheet = workbook.Sheets[sheetName];
-        var json = XLSX.utils.sheet_to_json(worksheet);
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
 
-        fetch('upload.php', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            employees: json
-          })
-        })
-          .then(response => response.text())
-          .then(data => {
-            try {
-              const jsonResponse = JSON.parse(data);
-              alert(jsonResponse.message);
-              window.location.href = 'index.php';
-            } catch (error) {
-              console.error('Error parsing JSON:', error);
-              console.error('Server response:', data);
-              alert('uploading data: ' + error.message);
-            }
-          })
-          .catch(error => {
-            console.error('Error:', error);
-            alert(' uploading data: ' + error.message);
+          // Convert Excel headers to match PHP expected keys
+          const json = XLSX.utils.sheet_to_json(worksheet, {
+            header: [
+              'Employee Code', 'Institute Name', 'Department', 'Designation', 'location',
+              'Joining Date', 'leaving Date', 'Category', 'Full Name', 'Gender',
+              'Blood Group', 'Nationality', 'DOB', 'Father Name', 'Mother Name',
+              'Spouse Name', 'Mobile', 'Alt Number', 'Email', 'Address',
+              'Bank Name', 'Branch Name', 'Account Number', 'IFSC Code',
+              'PAN Number', 'Aadhar Number', 'Salary Category',
+              'Duty Hours', 'Total Hours', 'Hours per Day', 'Salary Payband',
+              'Basic Salary', 'PF Number', 'PF Join Date', 'Conveyance Allowance',
+              'DA', 'HRA', 'Medical Allowance', 'Travelling Allowance', 'Other Allowance'
+            ],
+            raw: false // Ensures dates are properly formatted
           });
+
+          fetch('upload-ins.php', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ employees: json })
+          })
+            .then(response => response.json())
+            .then(data => {
+              alert(data.message);
+              if (data.message.includes('successfully')) {
+                window.location.href = 'index.php';
+              }
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              alert('Error uploading data: ' + error.message);
+            });
+        } catch (error) {
+          console.error('Error processing file:', error);
+          alert('Error processing Excel file: ' + error.message);
+        }
+      };
+
+      reader.onerror = function () {
+        alert('Error reading file');
       };
 
       reader.readAsArrayBuffer(file);
@@ -1972,6 +1983,97 @@ $result = $stmt->get_result();
       document.addEventListener('keypress', resetInactivityTimer);
       document.addEventListener('click', resetInactivityTimer);
     };
+
+    function exportToExcel() {
+      try {
+        // Get the table element
+        const table = document.getElementById('employeeTable');
+
+        if (!table) {
+          throw new Error('Employee table not found on the page');
+        }
+
+        // Define the desired column headers (excluding Actions and Approval Status)
+        const headers = [
+          'Employee Code', 'Institute Name', 'Department', 'Designation', 'location',
+          'Joining Date', 'leaving Date', 'Category', 'Full Name', 'Gender',
+          'Blood Group', 'Nationality', 'DOB', 'Father Name', 'Mother Name',
+          'Spouse Name', 'Mobile', 'Alt Number', 'Email', 'Address',
+          'Bank Name', 'Branch Name', 'Account Number', 'IFSC Code',
+          'PAN Number', 'Aadhar Number', 'Salary Category',
+          'Duty Hours', 'Total Hours', 'Hours per Day', 'Salary Payband',
+          'Basic Salary', 'PF Number', 'PF Join Date', 'Conveyance Allowance',
+          'DA', 'HRA', 'Medical Allowance', 'Travelling Allowance', 'Other Allowance'
+        ];
+
+        // Full list of possible headers including those to exclude
+        const allPossibleHeaders = [
+          'Employee Code', 'Institute Name', 'Department', 'Designation', 'location',
+          'Joining Date', 'leaving Date', 'Category', 'Full Name', 'Gender',
+          'Blood Group', 'Nationality', 'DOB', 'Father Name', 'Mother Name',
+          'Spouse Name', 'Mobile', 'Alt Number', 'Email', 'Address',
+          'Bank Name', 'Branch Name', 'Account Number', 'IFSC Code',
+          'PAN Number', 'Aadhar Number', 'Salary Category',
+          'Duty Hours', 'Total Hours', 'Hours per Day', 'Salary Payband',
+          'Basic Salary', 'PF Number', 'PF Join Date', 'Conveyance Allowance',
+          'DA', 'HRA', 'Medical Allowance', 'Travelling Allowance', 'Other Allowance',
+          'Actions', 'Approval Status'
+        ];
+
+        // Get the header row from the table to determine column positions
+        const headerRow = table.querySelector('thead tr') || table.querySelector('tr');
+        const tableHeaders = Array.from(headerRow.querySelectorAll('th, td')).map(cell => cell.textContent.trim());
+
+        // Map indices of columns to keep
+        const includedIndices = allPossibleHeaders
+          .map((header, index) => {
+            const tableIndex = tableHeaders.indexOf(header);
+            return (header === 'Actions' || header === 'Approval Status' || tableIndex === -1) ? -1 : tableIndex;
+          })
+          .filter(index => index !== -1);
+
+        // Extract and filter table data
+        const rows = Array.from(table.querySelectorAll('tr'));
+        const data = rows.map(row => {
+          const cells = Array.from(row.querySelectorAll('th, td')).map(cell => cell.textContent.trim());
+          return includedIndices.map(index => cells[index] || '');
+        });
+
+        // Ensure headers match the data structure
+        if (data.length > 0 && data[0].length !== headers.length) {
+          console.warn('Table columns adjusted to match filtered headers.');
+          data[0] = headers; // Set filtered headers as the first row
+        }
+
+        // Create a new worksheet from the filtered data
+        const ws = XLSX.utils.aoa_to_sheet(data);
+
+        // Optional: Add formatting
+        ws['!cols'] = headers.map(() => ({ wch: 15 }));
+        ws['!rows'] = [{ hpt: 20 }];
+
+        // Create a new workbook
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Employees Data');
+
+        // Filename with timestamp
+        const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        const fileName = `Employees_Data_${timestamp}.xlsx`;
+
+        // Write the file and trigger download
+        XLSX.writeFile(wb, fileName, {
+          bookType: 'xlsx',
+          type: 'binary',
+          compression: true
+        });
+
+        console.log('Excel file exported successfully:', fileName);
+      } catch (error) {
+        console.error('Error exporting to Excel:', error);
+        alert('Error exporting data to Excel: ' + error.message);
+      }
+    }
+    //
   </script>
 </body>
 

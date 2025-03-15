@@ -43,7 +43,7 @@ CREATE TABLE `admin_users` (
 --
 
 INSERT INTO `admin_users` (`id`, `user_id`, `password`, `name`, `email`, `created_at`, `remember_token`, `token_expiry`) VALUES
-(1, 'admin1', '0192023a7bbd73250516f069df18b500', 'meet', 'meet@gmail.com', '2025-03-05 04:36:21', 'random_token', '2025-12-31 23:59:59');
+(1, 'admin@123', '5LAwI7DoCbgJ7iJawkTnc/SzgMfifKXfrzykAMdW9sM=', 'Harsh', 'harsh@gmail.com', '2025-03-05 04:36:21', 'random_token', '2025-12-31 23:59:59');
 
 -- --------------------------------------------------------
 

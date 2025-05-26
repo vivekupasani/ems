@@ -1,11 +1,23 @@
 <?php
+// No-cache headers to prevent login page being shown after login
+header("Expires: Tue, 01 Jan 2000 00:00:00 GMT");
+header("Last-Modified: " . gmdate("D, d M Y H:i:s") . " GMT");
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+
 session_start();
 
+// Redirect if already logged in
+if (isset($_SESSION['admin_id']) && $_SESSION['is_admin'] === true) {
+    header("Location: index.php");
+    exit();
+}
 
 // Check remember me cookie
 if (isset($_COOKIE['admin_remember']) && !isset($_SESSION['is_admin'])) {
     require_once 'config/database.php';
-    
+
     $token = $_COOKIE['admin_remember'];
     $stmt = $pdo->prepare("SELECT * FROM admin_users WHERE remember_token = :token AND token_expiry > NOW()");
     $stmt->execute(['token' => $token]);
@@ -21,29 +33,42 @@ if (isset($_COOKIE['admin_remember']) && !isset($_SESSION['is_admin'])) {
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-store" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Login - Multi-Role Management System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <!-- JS to reload on back navigation -->
+    <script>
+    window.addEventListener("pageshow", function (event) {
+        if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
+            window.location.reload();
+        }
+    });
+</script>
 </head>
+
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
     <div class="max-w-md w-full">
-        <?php if(isset($_SESSION['error'])): ?>
-        <div class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-            <span class="block sm:inline"><?php echo $_SESSION['error']; ?></span>
-            <?php unset($_SESSION['error']); ?>
-        </div>
+        <?php if (isset($_SESSION['error'])): ?>
+            <div class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                <span class="block sm:inline"><?php echo $_SESSION['error']; ?></span>
+                <?php unset($_SESSION['error']); ?>
+            </div>
         <?php endif; ?>
 
-        <?php if(isset($_SESSION['success'])): ?>
-        <div class="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
-            <span class="block sm:inline"><?php echo $_SESSION['success']; ?></span>
-            <?php unset($_SESSION['success']); ?>
-        </div>
+        <?php if (isset($_SESSION['success'])): ?>
+            <div class="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
+                <span class="block sm:inline"><?php echo $_SESSION['success']; ?></span>
+                <?php unset($_SESSION['success']); ?>
+            </div>
         <?php endif; ?>
 
         <div class="text-center mb-8">
@@ -84,7 +109,8 @@ if (isset($_COOKIE['admin_remember']) && !isset($_SESSION['is_admin'])) {
                             class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
                         <label for="remember-me" class="ml-2 block text-sm text-gray-700">Remember me</label>
                     </div>
-                    <a href="forgot_password.php" class="text-sm text-purple-600 hover:text-purple-500">Forgot password?</a>
+                    <a href="forgot_password.php" class="text-sm text-purple-600 hover:text-purple-500">Forgot
+                        password?</a>
                 </div>
 
                 <button type="submit"
@@ -101,4 +127,5 @@ if (isset($_COOKIE['admin_remember']) && !isset($_SESSION['is_admin'])) {
         </div>
     </div>
 </body>
+
 </html>

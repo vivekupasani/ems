@@ -1,17 +1,30 @@
 <?php
+// No-cache headers to prevent login page being shown after login
+header("Expires: Tue, 01 Jan 2000 00:00:00 GMT");
+header("Last-Modified: " . gmdate("D, d M Y H:i:s") . " GMT");
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+
 session_start();
 
+// Redirect if already logged in
+if (isset($_SESSION['school_id']) && $_SESSION['is_school'] === true) {
+    header("Location: school_dashboard.php");
+    exit();
+}
 
 // Check remember me cookie
 if (isset($_COOKIE['school_remember']) && !isset($_SESSION['is_school'])) {
     require_once 'config/database.php';
-    
+
     $token = $_COOKIE['school_remember'];
     $stmt = $pdo->prepare("SELECT * FROM school_users WHERE remember_token = :token AND token_expiry > NOW()");
     $stmt->execute(['token' => $token]);
     $school = $stmt->fetch();
 
     if ($school) {
+        session_regenerate_id(true);
         $_SESSION['school_id'] = $school['user_id'];
         $_SESSION['school_name'] = $school['school_name'];
         $_SESSION['user_name'] = $school['name'];
@@ -23,27 +36,36 @@ if (isset($_COOKIE['school_remember']) && !isset($_SESSION['is_school'])) {
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>School Login - Multi-Role Management System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script>
+        window.addEventListener("pageshow", function (event) {
+            if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
+                window.location.reload();
+            }
+        });
+    </script>
 </head>
+
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
     <div class="max-w-md w-full">
-        <?php if(isset($_SESSION['error'])): ?>
-        <div class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-            <span class="block sm:inline"><?php echo $_SESSION['error']; ?></span>
-            <?php unset($_SESSION['error']); ?>
-        </div>
+        <?php if (isset($_SESSION['error'])): ?>
+            <div class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                <span class="block sm:inline"><?php echo $_SESSION['error']; ?></span>
+                <?php unset($_SESSION['error']); ?>
+            </div>
         <?php endif; ?>
 
-        <?php if(isset($_SESSION['success'])): ?>
-        <div class="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
-            <span class="block sm:inline"><?php echo $_SESSION['success']; ?></span>
-            <?php unset($_SESSION['success']); ?>
-        </div>
+        <?php if (isset($_SESSION['success'])): ?>
+            <div class="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
+                <span class="block sm:inline"><?php echo $_SESSION['success']; ?></span>
+                <?php unset($_SESSION['success']); ?>
+            </div>
         <?php endif; ?>
 
         <div class="text-center mb-8">
@@ -60,9 +82,9 @@ if (isset($_COOKIE['school_remember']) && !isset($_SESSION['is_school'])) {
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <i class="fas fa-id-card text-gray-400"></i>
                         </div>
-                        <input type="text" name="school_id" required 
-                               class="block w-full pl-10 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
-                               placeholder="Enter your school ID">
+                        <input type="text" name="school_id" required
+                            class="block w-full pl-10 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
+                            placeholder="Enter your school ID">
                     </div>
                 </div>
 
@@ -72,23 +94,24 @@ if (isset($_COOKIE['school_remember']) && !isset($_SESSION['is_school'])) {
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <i class="fas fa-lock text-gray-400"></i>
                         </div>
-                        <input type="password" name="password" required 
-                               class="block w-full pl-10 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
-                               placeholder="Enter your password">
+                        <input type="password" name="password" required
+                            class="block w-full pl-10 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
+                            placeholder="Enter your password">
                     </div>
                 </div>
 
                 <div class="flex items-center justify-between">
                     <div class="flex items-center">
-                        <input type="checkbox" id="remember-me" name="remember-me" 
-                               class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded">
+                        <input type="checkbox" id="remember-me" name="remember-me"
+                            class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded">
                         <label for="remember-me" class="ml-2 block text-sm text-gray-700">Remember me</label>
                     </div>
-                    <a href="school_forgot_password.php" class="text-sm text-green-600 hover:text-green-500">Forgot password?</a>
+                    <a href="school_forgot_password.php" class="text-sm text-green-600 hover:text-green-500">Forgot
+                        password?</a>
                 </div>
 
-                <button type="submit" 
-                        class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                <button type="submit"
+                    class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
                     Sign in to School Dashboard
                 </button>
             </form>
@@ -101,4 +124,5 @@ if (isset($_COOKIE['school_remember']) && !isset($_SESSION['is_school'])) {
         </div>
     </div>
 </body>
+
 </html>

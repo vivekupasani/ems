@@ -2,9 +2,9 @@
 session_start();
 
 // Redirect to login if not authenticated
-if (!isset($_SESSION['school_id'])) {
-  $_SESSION['error'] = "Please log in to access the school dashboard.";
-  header("Location: school_login.php");
+if (!isset($_SESSION['institute_id']) || $_SESSION['is_institute'] !== true) {
+  $_SESSION['error'] = "Unauthorized access. Please log in.";
+  header("Location: default.php");
   exit();
 }
 
@@ -13,14 +13,14 @@ require_once 'config.php';
 $conn = connectDB();
 
 // Fetch the school name for the logged-in school user
-$school_id = $_SESSION['school_id'];
-$school_query = "SELECT school_name FROM school_users WHERE user_id = ?";
+$school_id = $_SESSION['institute_id'];
+$school_query = "SELECT institute_name FROM institute_users WHERE user_id = ?";
 $stmt = $conn->prepare($school_query);
 $stmt->bind_param("s", $school_id);
 $stmt->execute();
 $school_result = $stmt->get_result();
 $school = $school_result->fetch_assoc();
-$school_name = $school['school_name'] ?? '';
+$school_name = $school['institute_name'] ?? '';
 $stmt->close();
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -276,7 +276,7 @@ $result = $stmt->get_result();
         <div class="flex items-center">
           <button
             class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-md flex items-center text-sm md:text-base"
-            onclick="logout()">
+            onclick="window.location.href='logout.php'">
             <i class="fas fa-sign-out-alt mr-1 md:mr-2"></i>
             <span class="hidden sm:inline">Logout</span>
           </button>

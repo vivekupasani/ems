@@ -276,7 +276,7 @@ $result = $stmt->get_result();
         <div class="flex items-center">
           <button
             class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-md flex items-center text-sm md:text-base"
-            onclick="logout()">
+            onclick="window.location.href='logout.php'">
             <i class="fas fa-sign-out-alt mr-1 md:mr-2"></i>
             <span class="hidden sm:inline">Logout</span>
           </button>

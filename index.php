@@ -4,7 +4,7 @@ session_start();
 // Secure admin authentication check
 if (!isset($_SESSION['admin_id']) || $_SESSION['is_admin'] !== true) {
   $_SESSION['error'] = "Unauthorized access. Please log in.";
-  header("Location: admin_login.php");
+  header("Location: default.php");
   exit();
 }
 
@@ -229,7 +229,7 @@ $result = mysqli_query($conn, $sql);
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Employee Appointment Management System</title>
+  <title>Employee Management System</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/js/all.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.1/flowbite.min.js"></script>
@@ -255,7 +255,7 @@ $result = mysqli_query($conn, $sql);
           </div>
           <div class="ml-4">
             <h1 class="text-lg md:text-xl font-bold text-gray-800 break-words">
-              <span class="hidden md:inline">Employee Appointment Management System</span>
+              <span class="hidden md:inline">Employee Management System</span>
               <span class="inline md:hidden">EMS System</span>
             </h1>
           </div>
@@ -264,7 +264,7 @@ $result = mysqli_query($conn, $sql);
         <div class="flex items-center">
           <button
             class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-md flex items-center text-sm md:text-base"
-            onClick="window.location='default.php'">
+            onclick="window.location.href='logout.php'">
             <i class="fas fa-sign-out-alt mr-1 md:mr-2"></i>
             <span class="hidden sm:inline">Logout</span>
           </button>

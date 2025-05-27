@@ -222,16 +222,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
   }
 
-  header("Location: school_dashboard.php"); // Refresh the page
+  header("Location: ins_dashboard.php"); // Refresh the page
   exit();
 }
 
 // Fetch employees for this specific school
-$sql = "SELECT * FROM employees WHERE institute_name = ?";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("s", $school_name);
-$stmt->execute();
-$result = $stmt->get_result();
+$institute_name = $_SESSION['institute_name'] ?? $institute_name;
+// Escape the input to prevent SQL injection
+$institute_name = mysqli_real_escape_string($conn, $institute_name);
+
+$sql = "SELECT * FROM employees WHERE institute_name = '$institute_name'";
+$result = mysqli_query($conn, $sql);
+
+if (!$result) {
+  $_SESSION['error'] = "Error fetching employees: " . mysqli_error($conn);
+  header("Location: ins_login.php");
+  exit();
+}
 ?>
 
 <!DOCTYPE html>
@@ -240,7 +247,7 @@ $result = $stmt->get_result();
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Employee Appointment Management System</title>
+  <title>Employee Management System</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/js/all.min.js"></script>
@@ -267,7 +274,7 @@ $result = $stmt->get_result();
           </div>
           <div class="ml-4">
             <h1 class="text-lg md:text-xl font-bold text-gray-800 break-words">
-              <span class="hidden md:inline">Employee Appointment Management System</span>
+              <span class="hidden md:inline">Employee Management System</span>
               <span class="inline md:hidden">EAM System</span>
             </h1>
           </div>
